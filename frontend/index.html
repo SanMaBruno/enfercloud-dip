@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>enferCloud — Vigilancia DIP</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter','system-ui','sans-serif'] },
+          colors: {
+            primary: { 50:'#f0f7ff',100:'#e0effe',200:'#bae0fd',300:'#7cc8fb',400:'#36aaf5',500:'#0c8ee8',600:'#0270c7',700:'#0359a3',800:'#064b87',900:'#0a3f70' },
+          },
+          boxShadow: {
+            'card': '0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.06)',
+            'card-hover': '0 4px 8px rgba(0,0,0,0.06), 0 12px 32px rgba(0,0,0,0.10)',
+            'modal': '0 20px 60px rgba(0,0,0,0.20)',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* ── Base ── */
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    /* ── Sidebar ── */
+    .sidebar { background: linear-gradient(180deg, #0f172a 0%, #0c1a3a 60%, #071530 100%); }
+    .nav-item { display:flex; align-items:center; gap:10px; padding:9px 14px; border-radius:10px; font-size:13px; font-weight:500; color:#94a3b8; cursor:pointer; transition:all .18s; user-select:none; }
+    .nav-item:hover { background:rgba(255,255,255,.07); color:#e2e8f0; }
+    .nav-item.active { background:rgba(12,142,232,.18); color:#7cc8fb; border:1px solid rgba(12,142,232,.25); }
+    .nav-item svg { width:15px; height:15px; flex-shrink:0; }
+
+    /* ── Cards ── */
+    .card { background:#fff; border-radius:16px; box-shadow:var(--tw-shadow,0 1px 3px rgba(0,0,0,.04),0 4px 16px rgba(0,0,0,.06)); border:1px solid rgba(0,0,0,.05); transition:box-shadow .2s, transform .2s; }
+    .card:hover { box-shadow:0 4px 8px rgba(0,0,0,.06),0 12px 32px rgba(0,0,0,.10); }
+
+    /* ── KPI cards ── */
+    .kpi-card { position:relative; overflow:hidden; }
+    .kpi-card::before { content:''; position:absolute; top:-40px; right:-40px; width:120px; height:120px; border-radius:50%; opacity:.06; }
+    .kpi-total::before    { background:#0c8ee8; }
+    .kpi-incluido::before { background:#10b981; }
+    .kpi-excluido::before { background:#ef4444; }
+    .kpi-activo::before   { background:#f59e0b; }
+    .kpi-promedio::before { background:#8b5cf6; }
+
+    /* ── Inputs / selects ── */
+    .field-input { width:100%; border-radius:10px; border:1.5px solid #e2e8f0; background:#f8fafc; padding:9px 14px; font-size:13.5px; color:#1e293b; transition:border-color .15s, box-shadow .15s; outline:none; }
+    .field-input::placeholder { color:#94a3b8; }
+    .field-input:focus { border-color:#0c8ee8; box-shadow:0 0 0 3px rgba(12,142,232,.12); background:#fff; }
+    .field-input:disabled { background:#f1f5f9; color:#94a3b8; cursor:not-allowed; }
+    label.field-label { display:block; font-size:11px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px; }
+
+    /* ── Buttons ── */
+    .btn { display:inline-flex; align-items:center; gap:7px; padding:9px 18px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; border:none; }
+    .btn svg { width:14px; height:14px; }
+    .btn-primary { background:#0c8ee8; color:#fff; }
+    .btn-primary:hover { background:#0270c7; box-shadow:0 4px 14px rgba(12,142,232,.35); transform:translateY(-1px); }
+    .btn-primary:active { transform:none; box-shadow:none; }
+    .btn-ghost { background:transparent; color:#64748b; border:1.5px solid #e2e8f0; }
+    .btn-ghost:hover { background:#f8fafc; border-color:#cbd5e1; color:#334155; }
+    .btn-danger { background:#ef4444; color:#fff; }
+    .btn-danger:hover { background:#dc2626; box-shadow:0 4px 14px rgba(239,68,68,.35); transform:translateY(-1px); }
+    .btn-success { background:#10b981; color:#fff; }
+    .btn-success:hover { background:#059669; box-shadow:0 4px 14px rgba(16,185,129,.35); transform:translateY(-1px); }
+    .btn-sm { padding:6px 12px; font-size:12px; border-radius:8px; }
+    .btn-icon { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:8px; cursor:pointer; border:none; transition:all .15s; }
+    .btn-icon svg { width:14px; height:14px; }
+    .btn-icon:active { transform:scale(.92); }
+
+    /* ── Badge ── */
+    .badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:99px; font-size:11px; font-weight:700; }
+
+    /* ── Table ── */
+    .data-table { width:100%; border-collapse:collapse; font-size:13px; }
+    .data-table thead th { padding:10px 14px; text-align:left; font-size:10.5px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.6px; background:#f8fafc; border-bottom:1px solid #f1f5f9; white-space:nowrap; }
+    .data-table thead th:first-child { border-radius:0; }
+    .data-table tbody tr { border-bottom:1px solid #f8fafc; transition:background .12s; }
+    .data-table tbody tr:hover { background:#f0f7ff; }
+    .data-table tbody td { padding:12px 14px; color:#334155; vertical-align:middle; }
+
+    /* ── Tooltip ── */
+    [data-tip] { position:relative; }
+    [data-tip]:hover::after { content:attr(data-tip); position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%); background:#1e293b; color:#f8fafc; font-size:11px; font-weight:500; padding:5px 10px; border-radius:7px; white-space:nowrap; z-index:999; pointer-events:none; box-shadow:0 4px 16px rgba(0,0,0,.2); }
+    [data-tip]:hover::before { content:''; position:absolute; bottom:calc(100% + 3px); left:50%; transform:translateX(-50%); border:5px solid transparent; border-top-color:#1e293b; z-index:999; pointer-events:none; }
+
+    /* ── Animations ── */
+    @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+    @keyframes slideRight { from { opacity:0; transform:translateX(-12px); } to { opacity:1; transform:none; } }
+    @keyframes toastIn { from { opacity:0; transform:translateX(110%); } to { opacity:1; transform:none; } }
+    @keyframes toastOut { to { opacity:0; transform:translateX(110%); } }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.5; } }
+    .fade-up { animation:fadeUp .28s ease both; }
+    .slide-right { animation:slideRight .22s ease both; }
+
+    /* ── Skeleton ── */
+    .skeleton { background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:8px; }
+    @keyframes shimmer { to { background-position:-200% 0; } }
+
+    /* ── Dot live ── */
+    .dot-live { width:8px; height:8px; border-radius:50%; background:#10b981; box-shadow:0 0 0 2px rgba(16,185,129,.25); animation:livePulse 2s ease infinite; display:inline-block; }
+    @keyframes livePulse { 0%,100% { box-shadow:0 0 0 2px rgba(16,185,129,.25); } 50% { box-shadow:0 0 0 5px rgba(16,185,129,.08); } }
+
+    /* ── Section panel ── */
+    .section-panel { display:none; }
+    .section-panel.active { display:block; animation:fadeUp .25s ease both; }
+
+    /* ── Modal ── */
+    .modal-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.55); backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center; z-index:900; padding:20px; }
+    .modal-backdrop.open { display:flex; }
+    .modal-box { background:#fff; border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,.2); width:100%; max-width:440px; animation:fadeUp .22s ease; }
+
+    /* ── Servicio colors ── */
+    .srv-uci      { background:#fee2e2; color:#b91c1c; }
+    .srv-uti      { background:#ffedd5; color:#c2410c; }
+    .srv-uhi      { background:#f3e8ff; color:#7c3aed; }
+    .srv-medicina { background:#dbeafe; color:#1d4ed8; }
+    .srv-cirugia  { background:#d1fae5; color:#065f46; }
+
+    /* ── DIP colors ── */
+    .dip-cup    { background:#e0f2fe; color:#0369a1; }
+    .dip-cvc    { background:#ede9fe; color:#6d28d9; }
+    .dip-vmi    { background:#fef3c7; color:#92400e; }
+    .dip-other  { background:#f0fdf4; color:#166534; }
+
+    /* ── Estado ── */
+    .est-inc { background:#dcfce7; color:#166534; }
+    .est-exc { background:#fee2e2; color:#991b1b; }
+
+    /* ── Radio custom ── */
+    .radio-option { display:flex; align-items:center; gap:8px; padding:8px 14px; border-radius:10px; border:1.5px solid #e2e8f0; cursor:pointer; transition:all .15s; flex:1; }
+    .radio-option:has(input:checked) { border-color:#10b981; background:#f0fdf4; }
+    .radio-option.red:has(input:checked) { border-color:#ef4444; background:#fef2f2; }
+    .radio-option input { accent-color:#10b981; }
+    .radio-option.red input { accent-color:#ef4444; }
+
+    /* ── Progress bar ── */
+    .progress-bar { height:4px; border-radius:99px; background:#f1f5f9; overflow:hidden; }
+    .progress-fill { height:100%; border-radius:99px; transition:width .6s ease; }
+  </style>
+</head>
+
+<body class="h-full bg-slate-50 flex overflow-hidden text-slate-800">
+
+<!-- ══════════════ SIDEBAR ══════════════ -->
+<aside class="sidebar w-[220px] min-h-screen flex flex-col flex-shrink-0 select-none">
+
+  <!-- Brand -->
+  <div class="px-5 pt-6 pb-5">
+    <div class="flex items-center gap-3 mb-1">
+      <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:linear-gradient(135deg,#0c8ee8,#0359a3)">
+        <i data-lucide="activity" style="width:15px;height:15px;color:#fff"></i>
+      </div>
+      <span class="text-white font-bold text-[15px] tracking-tight">enferCloud</span>
+    </div>
+    <p class="text-slate-500 text-[11px] ml-11">Vigilancia DIP · v1.0</p>
+  </div>
+
+  <!-- Nav -->
+  <nav class="flex-1 px-3 space-y-0.5 overflow-y-auto">
+    <p class="text-[10px] font-700 text-slate-600 uppercase tracking-widest px-3 pt-2 pb-1.5">Principal</p>
+    <div class="nav-item active" data-section="resumen" onclick="navigate('resumen',this)">
+      <i data-lucide="layout-dashboard"></i> Resumen
+    </div>
+    <div class="nav-item" data-section="ingreso" onclick="navigate('ingreso',this)">
+      <i data-lucide="plus-circle"></i> Nuevo Registro
+    </div>
+    <div class="nav-item" data-section="registros" onclick="navigate('registros',this)">
+      <i data-lucide="table-2"></i> Ver Registros
+    </div>
+
+    <p class="text-[10px] font-700 text-slate-600 uppercase tracking-widest px-3 pt-5 pb-1.5">Herramientas</p>
+    <div class="nav-item" onclick="exportarExcel()">
+      <i data-lucide="file-spreadsheet"></i> Exportar Excel
+    </div>
+
+    <p class="text-[10px] font-700 text-slate-600 uppercase tracking-widest px-3 pt-5 pb-1.5">Servicios</p>
+    <div id="srv-nav" class="space-y-0.5"></div>
+  </nav>
+
+  <!-- User -->
+  <div class="px-4 py-4 border-t border-white/[.07] mt-2">
+    <div class="flex items-center gap-2.5">
+      <div class="w-8 h-8 rounded-xl bg-primary-600 flex items-center justify-center flex-shrink-0">
+        <i data-lucide="stethoscope" style="width:14px;height:14px;color:#fff"></i>
+      </div>
+      <div class="min-w-0">
+        <p class="text-white text-[12px] font-semibold truncate">Vigilancia DIP</p>
+        <p class="text-slate-500 text-[10px]" id="sidebar-date"></p>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ══════════════ MAIN ══════════════ -->
+<div class="flex-1 flex flex-col min-h-0 overflow-hidden">
+
+  <!-- Topbar -->
+  <header class="flex-shrink-0 bg-white border-b border-slate-100 px-6 h-[60px] flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div>
+        <h1 id="page-title" class="text-[15px] font-700 text-slate-900 leading-tight">Resumen</h1>
+        <p id="page-subtitle" class="text-[11px] text-slate-400">Visión general de vigilancia activa</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
+        <span class="dot-live"></span>
+        <span id="clock" class="text-[12px] font-mono text-slate-500 tabular-nums"></span>
+      </div>
+      <button onclick="navigate('ingreso',document.querySelector('[data-section=ingreso]'))" class="btn btn-primary text-[13px]">
+        <i data-lucide="plus"></i> Nuevo registro
+      </button>
+    </div>
+  </header>
+
+  <!-- Scrollable -->
+  <main class="flex-1 overflow-y-auto p-6 space-y-5">
+
+    <!-- ════ RESUMEN ════ -->
+    <section id="section-resumen" class="section-panel active space-y-5">
+
+      <!-- KPI row -->
+      <div class="grid grid-cols-5 gap-4">
+        <div class="card kpi-card kpi-total p-5">
+          <p class="text-[10.5px] font-700 text-slate-400 uppercase tracking-wide mb-2">Total registros</p>
+          <p class="text-[32px] font-800 text-slate-800 leading-none" id="s-total">—</p>
+          <div class="mt-3 flex items-center gap-1.5">
+            <i data-lucide="clipboard-list" style="width:13px;height:13px;color:#94a3b8"></i>
+            <span class="text-[11px] text-slate-400">Todos los períodos</span>
+          </div>
+        </div>
+        <div class="card kpi-card kpi-incluido p-5">
+          <p class="text-[10.5px] font-700 text-emerald-600 uppercase tracking-wide mb-2">Incluidos</p>
+          <p class="text-[32px] font-800 text-emerald-600 leading-none" id="s-incluidos">—</p>
+          <div class="mt-3 flex items-center gap-1.5">
+            <i data-lucide="check-circle-2" style="width:13px;height:13px;color:#10b981"></i>
+            <span class="text-[11px] text-slate-400">En vigilancia activa</span>
+          </div>
+        </div>
+        <div class="card kpi-card kpi-excluido p-5">
+          <p class="text-[10.5px] font-700 text-red-500 uppercase tracking-wide mb-2">Excluidos</p>
+          <p class="text-[32px] font-800 text-red-500 leading-none" id="s-excluidos">—</p>
+          <div class="mt-3 flex items-center gap-1.5">
+            <i data-lucide="x-circle" style="width:13px;height:13px;color:#ef4444"></i>
+            <span class="text-[11px] text-slate-400">Fuera de vigilancia</span>
+          </div>
+        </div>
+        <div class="card kpi-card kpi-activo p-5">
+          <p class="text-[10.5px] font-700 text-amber-500 uppercase tracking-wide mb-2">Activos</p>
+          <p class="text-[32px] font-800 text-amber-500 leading-none" id="s-activos">—</p>
+          <div class="mt-3 flex items-center gap-1.5">
+            <i data-lucide="activity" style="width:13px;height:13px;color:#f59e0b"></i>
+            <span class="text-[11px] text-slate-400">Sin fecha de retiro</span>
+          </div>
+        </div>
+        <div class="card kpi-card kpi-promedio p-5">
+          <p class="text-[10.5px] font-700 text-violet-600 uppercase tracking-wide mb-2">Promedio días</p>
+          <p class="text-[32px] font-800 text-violet-600 leading-none" id="s-promedio">—</p>
+          <div class="mt-3 flex items-center gap-1.5">
+            <i data-lucide="timer" style="width:13px;height:13px;color:#8b5cf6"></i>
+            <span class="text-[11px] text-slate-400">Por dispositivo</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts row -->
+      <div class="grid grid-cols-3 gap-4">
+        <!-- Donut -->
+        <div class="card p-5 flex flex-col">
+          <div class="flex items-center justify-between mb-1">
+            <p class="text-[13px] font-700 text-slate-800">Por tipo de DIP</p>
+            <span class="badge est-inc text-[10px]">Incluidos</span>
+          </div>
+          <p class="text-[11px] text-slate-400 mb-4">Distribución actual</p>
+          <div class="flex justify-center flex-1 items-center">
+            <canvas id="chart-dip" width="170" height="170"></canvas>
+          </div>
+          <div id="dip-legend" class="mt-4 space-y-2"></div>
+        </div>
+
+        <!-- Bar -->
+        <div class="card p-5 col-span-2 flex flex-col">
+          <div class="flex items-center justify-between mb-1">
+            <p class="text-[13px] font-700 text-slate-800">Días con dispositivo</p>
+            <span class="text-[11px] text-slate-400">Últimos 10 registros incluidos</span>
+          </div>
+          <p class="text-[11px] text-slate-400 mb-4">Ámbar = más de 14 días</p>
+          <canvas id="chart-dias" style="flex:1;min-height:0;max-height:190px"></canvas>
+        </div>
+      </div>
+
+      <!-- Servicios row -->
+      <div>
+        <h2 class="text-[12px] font-700 text-slate-400 uppercase tracking-widest mb-3">Actividad por servicio</h2>
+        <div class="grid grid-cols-5 gap-3" id="servicio-cards"></div>
+      </div>
+
+      <!-- Activos recientes -->
+      <div class="card overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-50">
+          <p class="text-[13px] font-700 text-slate-800">Pacientes activos</p>
+          <button onclick="navigate('registros',document.querySelector('[data-section=registros]'))" class="flex items-center gap-1 text-[12px] text-primary-600 font-600 hover:text-primary-800 transition-colors">
+            Ver todos <i data-lucide="chevron-right" style="width:13px;height:13px"></i>
+          </button>
+        </div>
+        <div id="resumen-activos" class="divide-y divide-slate-50/80"></div>
+      </div>
+    </section>
+
+    <!-- ════ INGRESO ════ -->
+    <section id="section-ingreso" class="section-panel">
+      <div class="max-w-[680px] mx-auto">
+        <div class="card overflow-hidden">
+          <!-- Form header -->
+          <div class="px-6 py-5" style="background:linear-gradient(135deg,#0f172a 0%,#0c1a3a 100%)">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-primary-600/30 border border-primary-400/20 flex items-center justify-center">
+                <i data-lucide="clipboard-plus" style="width:17px;height:17px;color:#7cc8fb"></i>
+              </div>
+              <div>
+                <h2 class="text-white font-700 text-[15px]">Nuevo Registro DIP</h2>
+                <p class="text-slate-400 text-[11px] mt-0.5">Campos con * son obligatorios</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Alert -->
+          <div id="form-alert" class="hidden mx-6 mt-5 px-4 py-3 rounded-xl text-[13px] font-500 flex items-center gap-2.5"></div>
+
+          <form id="form-registro" autocomplete="off" class="px-6 py-5 space-y-4">
+
+            <!-- Servicio / Sala -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="field-label">Servicio</label>
+                <select id="servicio" class="field-input">
+                  <option value="">— Seleccionar —</option>
+                  <optgroup label="UPC">
+                    <option value="UCI">UCI</option>
+                    <option value="UTI">UTI</option>
+                    <option value="UHI">UHI</option>
+                  </optgroup>
+                  <optgroup label="──────────">
+                    <option value="Medicina">Medicina</option>
+                    <option value="Cirugía">Cirugía</option>
+                  </optgroup>
+                </select>
+              </div>
+              <div>
+                <label class="field-label">Sala</label>
+                <select id="sala" disabled class="field-input">
+                  <option value="">— Seleccione servicio —</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Cama / RUT -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="field-label">Cama *</label>
+                <input id="cama" type="text" placeholder="Ej: 12A" class="field-input" />
+              </div>
+              <div>
+                <label class="field-label">RUT *</label>
+                <input id="rut" type="text" placeholder="Ej: 12.345.678-9" class="field-input" />
+              </div>
+            </div>
+
+            <!-- Nombre -->
+            <div>
+              <label class="field-label">Nombre y Apellido *</label>
+              <input id="nombre" type="text" placeholder="Ej: Juan Pérez González" class="field-input" />
+            </div>
+
+            <!-- Edad / Procedencia -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="field-label">Edad</label>
+                <input id="edad" type="number" min="0" max="150" placeholder="Años" class="field-input" />
+              </div>
+              <div>
+                <label class="field-label">Procedencia</label>
+                <input id="procedencia" type="text" placeholder="Ej: Urgencias" class="field-input" />
+              </div>
+            </div>
+
+            <!-- DIP / Ubicación -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="field-label">Tipo de DIP *</label>
+                <select id="dip" class="field-input">
+                  <option value="">— Seleccionar —</option>
+                  <option value="CUP">CUP — Catéter Urinario</option>
+                  <option value="CVC">CVC — Catéter Venoso Central</option>
+                  <option value="VMI">VMI — Ventilación Mecánica</option>
+                  <option value="CUP USUARIO">CUP Usuario</option>
+                  <option value="CVC CON GRIPPER">CVC con Gripper</option>
+                  <option value="CHD AGUDO">CHD Agudo</option>
+                  <option value="CHD CRÓNICO">CHD Crónico</option>
+                  <option value="CHD AFERESIS">CHD Aféresis</option>
+                  <option value="PICCLINE">PICCLINE</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-label">Ubicación DIP</label>
+                <select id="ubicacion_dip" disabled class="field-input">
+                  <option value="">— Seleccione DIP —</option>
+                </select>
+                <p id="ubicacion-hint" class="text-[11px] text-slate-400 mt-1.5 min-h-[16px]"></p>
+              </div>
+            </div>
+
+            <!-- Fechas -->
+            <div class="grid grid-cols-3 gap-3">
+              <div>
+                <label class="field-label">Ingreso sala</label>
+                <input id="fecha_ingreso_sala" type="date" class="field-input" />
+              </div>
+              <div>
+                <label class="field-label">Instalación DIP *</label>
+                <input id="fecha_instalacion" type="date" class="field-input" />
+              </div>
+              <div>
+                <label class="field-label">Retiro / Alta</label>
+                <input id="fecha_retiro" type="date" class="field-input" />
+              </div>
+            </div>
+
+            <!-- Estado -->
+            <div>
+              <label class="field-label">Estado</label>
+              <div class="flex gap-2">
+                <label class="radio-option">
+                  <input type="radio" name="estado" value="INCLUIDO" checked />
+                  <div>
+                    <p class="text-[13px] font-600 text-emerald-700">Incluido</p>
+                    <p class="text-[10px] text-slate-400">En vigilancia</p>
+                  </div>
+                </label>
+                <label class="radio-option red">
+                  <input type="radio" name="estado" value="EXCLUIDO" />
+                  <div>
+                    <p class="text-[13px] font-600 text-red-600">Excluido</p>
+                    <p class="text-[10px] text-slate-400">Fuera de vigilancia</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Observaciones -->
+            <div>
+              <label class="field-label">Observaciones / Hallazgos</label>
+              <textarea id="observaciones" rows="3" placeholder="Hallazgos clínicos, cambios, incidentes..." class="field-input resize-none"></textarea>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex gap-2.5 pt-2 border-t border-slate-100">
+              <button type="submit" class="btn btn-primary flex-1 justify-center py-2.5">
+                <i data-lucide="save"></i> Guardar Registro
+              </button>
+              <button type="button" id="btn-limpiar" class="btn btn-ghost px-5">
+                <i data-lucide="eraser"></i> Limpiar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════ REGISTROS ════ -->
+    <section id="section-registros" class="section-panel space-y-4">
+
+      <!-- Toolbar -->
+      <div class="card px-4 py-3 flex flex-wrap items-center gap-3">
+        <div class="relative flex-1 min-w-[220px] max-w-xs">
+          <i data-lucide="search" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:#94a3b8"></i>
+          <input id="buscador" type="text" placeholder="Nombre, RUT, cama, sala…" class="field-input pl-8 py-2 text-[13px]" />
+        </div>
+        <div class="flex items-center gap-2">
+          <!-- Filtro servicio -->
+          <select id="filtro-servicio" class="field-input py-2 text-[13px] w-auto pr-8">
+            <option value="">Todos los servicios</option>
+            <option value="UCI">UCI</option>
+            <option value="UTI">UTI</option>
+            <option value="UHI">UHI</option>
+            <option value="Medicina">Medicina</option>
+            <option value="Cirugía">Cirugía</option>
+          </select>
+          <label class="flex items-center gap-1.5 text-[12.5px] text-slate-500 font-500 cursor-pointer whitespace-nowrap">
+            <input id="solo-activos" type="checkbox" class="rounded accent-primary-500" />
+            Solo activos
+          </label>
+        </div>
+        <div class="flex gap-2 ml-auto">
+          <button onclick="exportarExcel()" class="btn btn-success btn-sm" data-tip="Descargar planilla Excel">
+            <i data-lucide="download"></i> Excel
+          </button>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="card overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Servicio · Sala</th>
+                <th>Cama</th>
+                <th>Paciente</th>
+                <th>DIP</th>
+                <th>Ubicación</th>
+                <th>F. Instalación</th>
+                <th>Estado</th>
+                <th style="text-align:center">Días DIP</th>
+                <th style="text-align:center">Días Hosp.</th>
+                <th style="text-align:center">Retiro</th>
+                <th style="text-align:center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-body"></tbody>
+          </table>
+        </div>
+        <div id="tabla-empty" class="hidden py-20 text-center">
+          <div class="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
+            <i data-lucide="inbox" style="width:24px;height:24px;color:#cbd5e1"></i>
+          </div>
+          <p class="text-[14px] font-600 text-slate-400">Sin registros</p>
+          <p class="text-[12px] text-slate-300 mt-1">Agrega el primero desde "Nuevo Registro"</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ══════════════ MODAL RETIRO ══════════════ -->
+<div id="modal-retiro-bd" class="modal-backdrop">
+  <div class="modal-box p-6">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-primary-50 flex items-center justify-center">
+          <i data-lucide="calendar-check" style="width:16px;height:16px;color:#0c8ee8"></i>
+        </div>
+        <h3 class="text-[15px] font-700 text-slate-800">Registrar Retiro</h3>
+      </div>
+      <button onclick="cerrarModalRetiro()" class="btn-icon bg-slate-100 hover:bg-slate-200 text-slate-500">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    <p class="text-[13px] text-slate-500 mb-1">Paciente:</p>
+    <p class="text-[14px] font-700 text-slate-800 mb-4" id="modal-retiro-nombre"></p>
+    <div class="mb-5">
+      <label class="field-label">Fecha de retiro / alta / traslado</label>
+      <input type="date" id="modal-retiro-fecha" class="field-input" />
+    </div>
+    <div class="flex gap-2.5">
+      <button onclick="cerrarModalRetiro()" class="btn btn-ghost flex-1 justify-center">Cancelar</button>
+      <button onclick="confirmarRetiro()" class="btn btn-primary flex-1 justify-center">Confirmar retiro</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL ELIMINAR ══════════════ -->
+<div id="modal-delete-bd" class="modal-backdrop">
+  <div class="modal-box p-6">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center">
+          <i data-lucide="trash-2" style="width:16px;height:16px;color:#ef4444"></i>
+        </div>
+        <h3 class="text-[15px] font-700 text-red-600">Eliminar Registro</h3>
+      </div>
+      <button onclick="cerrarModalDelete()" class="btn-icon bg-slate-100 hover:bg-slate-200 text-slate-500">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    <p class="text-[13px] text-slate-500 mb-1">¿Eliminar el registro de:</p>
+    <p class="text-[14px] font-700 text-slate-800 mb-3" id="modal-delete-nombre"></p>
+    <div class="bg-red-50 border border-red-100 rounded-xl p-3 text-[12px] text-red-600 flex items-start gap-2 mb-5">
+      <i data-lucide="alert-triangle" style="width:14px;height:14px;flex-shrink:0;margin-top:1px"></i>
+      Esta acción no se puede deshacer. El registro será eliminado permanentemente.
+    </div>
+    <div class="flex gap-2.5">
+      <button onclick="cerrarModalDelete()" class="btn btn-ghost flex-1 justify-center">Cancelar</button>
+      <button onclick="ejecutarEliminar()" class="btn btn-danger flex-1 justify-center">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ TOASTS ══════════════ -->
+<div id="toast-root" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
+
+<!-- ══════════════ SCRIPTS ══════════════ -->
+<script src="assets/js/api-client.js"></script>
+<script>
+/* ═══════════════════════════════════════
+   CONFIG
+═══════════════════════════════════════ */
+const SALAS = {
+  'UCI':      ['UCI','UTI Q'],
+  'UTI':      ['Borquez Silva','Hector Ducci','UTIM'],
+  'UHI':      ['UHI'],
+  'Medicina': ['Manuel Matus','Gustavo Pineda','Álvaro Covarrubias','Joaquín Luco','Pérez Canto','Joel Rodríguez','Ricardo Donoso','RERA'],
+  'Cirugía':  ['Oftalmología','Ignacio Díaz','Eduardo Moore','San Daniel','San Vicente','San José','Jorge Molina','Torres Boone'],
+};
+const UBICACIONES_DIP = {
+  'CUP': ['GEN M','GEN F'],
+  'CVC': ['YD','YI','SCD','SCI','FEM D','FEM I','BD','BI'],
+  'VMI': ['TOT','TQT'],
+};
+const DIP_SIN_UBIC = ['CUP USUARIO','CVC CON GRIPPER','CHD AGUDO','CHD CRÓNICO','CHD AFERESIS','PICCLINE'];
+
+const SRV_CLASS = { UCI:'srv-uci', UTI:'srv-uti', UHI:'srv-uhi', Medicina:'srv-medicina', Cirugía:'srv-cirugia' };
+const DIP_CLASS = { CUP:'dip-cup', CVC:'dip-cvc', VMI:'dip-vmi' };
+const SRV_COLOR_DOT = { UCI:'#ef4444', UTI:'#f97316', UHI:'#8b5cf6', Medicina:'#0c8ee8', Cirugía:'#10b981' };
+const CHART_PALETTE = ['#0c8ee8','#8b5cf6','#f59e0b','#10b981','#ef4444','#06b6d4','#f97316','#84cc16'];
+
+const PAGE_META = {
+  resumen:   ['Resumen','Visión general de vigilancia activa'],
+  ingreso:   ['Nuevo Registro','Ingresar datos de dispositivo invasivo'],
+  registros: ['Ver Registros','Historial completo — todos los dispositivos'],
+};
+
+/* ═══════════════════════════════════════
+   STATE
+═══════════════════════════════════════ */
+let allRecords = [];
+let dipChart = null, diasChart = null;
+let _deleteId = null;
+
+/* ═══════════════════════════════════════
+   CLOCK & DATE
+═══════════════════════════════════════ */
+(function clock() {
+  const tick = () => document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  tick(); setInterval(tick, 1000);
+})();
+document.getElementById('sidebar-date').textContent =
+  new Date().toLocaleDateString('es-CL',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+
+/* ═══════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════ */
+function navigate(section, el) {
+  if (event) event.preventDefault();
+  document.querySelectorAll('.section-panel').forEach(s => s.classList.remove('active'));
+  document.getElementById('section-' + section).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  const [title, subtitle] = PAGE_META[section] || ['',''];
+  document.getElementById('page-title').textContent = title;
+  document.getElementById('page-subtitle').textContent = subtitle;
+}
+
+/* ═══════════════════════════════════════
+   SIDEBAR SERVICES NAV
+═══════════════════════════════════════ */
+function buildSrvNav(records) {
+  const counts = {};
+  records.filter(r => r.estado === 'INCLUIDO').forEach(r => {
+    if (r.servicio) counts[r.servicio] = (counts[r.servicio]||0)+1;
+  });
+  const container = document.getElementById('srv-nav');
+  container.innerHTML = Object.keys(SALAS).map(s => `
+    <div class="nav-item text-[12px]" onclick="filtrarPorServicio('${s}')">
+      <span style="width:7px;height:7px;border-radius:50%;background:${SRV_COLOR_DOT[s]};flex-shrink:0;display:inline-block"></span>
+      <span class="flex-1">${s}</span>
+      ${counts[s] ? `<span class="bg-white/10 text-slate-300 text-[10px] font-700 px-1.5 py-0.5 rounded-md">${counts[s]}</span>` : ''}
+    </div>`).join('');
+}
+
+function filtrarPorServicio(srv) {
+  document.getElementById('filtro-servicio').value = srv;
+  navigate('registros', document.querySelector('[data-section=registros]'));
+  aplicarFiltros();
+}
+
+/* ═══════════════════════════════════════
+   TOAST
+═══════════════════════════════════════ */
+function toast(msg, type='success') {
+  const icons = { success:'check-circle-2', error:'x-circle', info:'info', warning:'alert-triangle' };
+  const colors = { success:'bg-emerald-500', error:'bg-red-500', info:'bg-primary-500', warning:'bg-amber-500' };
+  const el = document.createElement('div');
+  el.className = `pointer-events-auto flex items-center gap-3 ${colors[type]} text-white text-[12.5px] font-500 px-4 py-3 rounded-xl shadow-lg max-w-[300px]`;
+  el.style.animation = 'toastIn .28s ease';
+  el.innerHTML = `<i data-lucide="${icons[type]}" style="width:15px;height:15px;flex-shrink:0"></i><span>${msg}</span>`;
+  document.getElementById('toast-root').appendChild(el);
+  lucide.createIcons({nodes:[el]});
+  setTimeout(() => { el.style.animation = 'toastOut .28s ease forwards'; setTimeout(() => el.remove(), 280); }, 3500);
+}
+
+/* ═══════════════════════════════════════
+   FORM ALERT
+═══════════════════════════════════════ */
+function formAlert(msg, type) {
+  const el = document.getElementById('form-alert');
+  const cfg = {
+    error:   'bg-red-50 border border-red-200 text-red-700',
+    success: 'bg-emerald-50 border border-emerald-200 text-emerald-700',
+  };
+  el.className = `mx-6 mt-5 px-4 py-3 rounded-xl text-[13px] font-500 flex items-center gap-2.5 ${cfg[type]}`;
+  el.innerHTML = `<i data-lucide="${type==='error'?'alert-circle':'check-circle-2'}" style="width:15px;height:15px;flex-shrink:0"></i>${msg}`;
+  el.classList.remove('hidden');
+  lucide.createIcons({nodes:[el]});
+  setTimeout(() => el.classList.add('hidden'), 4500);
+}
+
+/* ═══════════════════════════════════════
+   SELECTS EN CASCADA
+═══════════════════════════════════════ */
+document.getElementById('servicio').addEventListener('change', e => {
+  const s = e.target.value;
+  const sel = document.getElementById('sala');
+  sel.innerHTML = '<option value="">— Seleccionar —</option>';
+  if (s && SALAS[s]) {
+    sel.disabled = false;
+    SALAS[s].forEach(sala => { const o = new Option(sala,sala); sel.appendChild(o); });
+  } else {
+    sel.disabled = true;
+  }
+});
+
+document.getElementById('dip').addEventListener('change', e => {
+  const dip = e.target.value;
+  const sel = document.getElementById('ubicacion_dip');
+  const hint = document.getElementById('ubicacion-hint');
+  sel.innerHTML = '<option value="">— Seleccionar —</option>';
+  hint.textContent = '';
+  if (DIP_SIN_UBIC.includes(dip)) { sel.disabled = true; hint.textContent = 'No aplica ubicación.'; return; }
+  const opts = UBICACIONES_DIP[dip];
+  sel.disabled = !opts;
+  if (opts) {
+    opts.forEach(u => { const o = new Option(u,u); sel.appendChild(o); });
+    hint.textContent = 'Permitidas: ' + opts.join(', ');
+  }
+});
+
+/* ═══════════════════════════════════════
+   FORM SUBMIT
+═══════════════════════════════════════ */
+document.getElementById('form-registro').addEventListener('submit', async e => {
+  e.preventDefault();
+  const g = id => document.getElementById(id)?.value?.trim();
+  const [cama,rut,nombre,dip,fi] = ['cama','rut','nombre','dip','fecha_instalacion'].map(g);
+  if (!cama||!rut||!nombre||!dip||!fi) {
+    formAlert('Complete los campos obligatorios: Cama, RUT, Nombre, DIP y Fecha de instalación.','error');
+    return;
+  }
+  const payload = {
+    cama, rut, nombre, dip,
+    fecha_instalacion: fi,
+    estado: document.querySelector('input[name=estado]:checked')?.value || 'INCLUIDO',
+    servicio: g('servicio') || null,
+    sala: g('sala') || null,
+    edad: g('edad') ? parseInt(g('edad')) : null,
+    procedencia: g('procedencia') || null,
+    ubicacion_dip: g('ubicacion_dip') || null,
+    fecha_ingreso_sala: g('fecha_ingreso_sala') || null,
+    fecha_retiro: g('fecha_retiro') || null,
+    observaciones: g('observaciones') || null,
+  };
+  try {
+    await apiClient.crearRegistro(payload);
+    toast('Registro guardado correctamente.', 'success');
+    document.getElementById('form-registro').reset();
+    document.getElementById('ubicacion_dip').disabled = true;
+    document.getElementById('sala').disabled = true;
+    document.getElementById('ubicacion-hint').textContent = '';
+    await reloadAll();
+  } catch(err) { formAlert(err.message, 'error'); }
+});
+
+document.getElementById('btn-limpiar').addEventListener('click', () => {
+  document.getElementById('form-registro').reset();
+  document.getElementById('ubicacion_dip').disabled = true;
+  document.getElementById('sala').disabled = true;
+  document.getElementById('ubicacion-hint').textContent = '';
+  document.getElementById('form-alert').classList.add('hidden');
+});
+
+/* ═══════════════════════════════════════
+   TABLA
+═══════════════════════════════════════ */
+function fmtDate(d) {
+  if (!d) return '—';
+  const [y,m,dd] = d.split('-');
+  return `${dd}/${m}/${y}`;
+}
+function dipClass(d) { return DIP_CLASS[d] || 'dip-other'; }
+function srvClass(s) { return SRV_CLASS[s] || 'badge'; }
+
+function renderTable(records) {
+  const tbody = document.getElementById('tabla-body');
+  const empty = document.getElementById('tabla-empty');
+  tbody.innerHTML = '';
+  if (!records.length) { empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+
+  records.forEach(r => {
+    const srvTag = r.servicio
+      ? `<span class="badge ${srvClass(r.servicio)} text-[10px]">${r.servicio}</span>`
+      : '<span class="text-slate-300 text-[12px]">—</span>';
+    const salaTag = r.sala ? `<p class="text-[11px] text-slate-400 mt-0.5">${r.sala}</p>` : '';
+    const dipTag = `<span class="badge ${dipClass(r.dip)} text-[10.5px]">${r.dip}</span>`;
+    const estTag = r.estado === 'INCLUIDO'
+      ? `<span class="badge est-inc text-[10.5px]">Incluido</span>`
+      : `<span class="badge est-exc text-[10.5px]">Excluido</span>`;
+    const retiroTag = r.fecha_retiro
+      ? `<span class="text-[12px] text-slate-500">${fmtDate(r.fecha_retiro)}</span>`
+      : `<span class="flex items-center gap-1 text-[11px] text-emerald-600 font-600"><span class="dot-live" style="width:6px;height:6px"></span>Activo</span>`;
+    const diasColor = r.dias_dispositivo > 14 ? 'text-amber-500' : 'text-slate-700';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${srvTag}${salaTag}</td>
+      <td><span class="font-700 text-slate-700">${r.cama}</span></td>
+      <td>
+        <p class="font-600 text-slate-800 text-[13px]">${r.nombre}</p>
+        <p class="text-[11px] text-slate-400">${r.rut}${r.edad ? ' · '+r.edad+' a' : ''}</p>
+      </td>
+      <td>${dipTag}</td>
+      <td class="text-[12px] text-slate-500">${r.ubicacion_dip || '—'}</td>
+      <td class="text-[12px] text-slate-500">${fmtDate(r.fecha_instalacion)}</td>
+      <td>${estTag}</td>
+      <td style="text-align:center"><span class="font-800 text-[14px] ${diasColor}">${r.dias_dispositivo}</span><span class="text-[10px] text-slate-400"> d</span></td>
+      <td style="text-align:center" class="text-[12px] text-slate-400">${r.dias_hospitalizacion ?? '—'}</td>
+      <td style="text-align:center">${retiroTag}</td>
+      <td>
+        <div style="display:flex;align-items:center;justify-content:center;gap:5px">
+          ${!r.fecha_retiro ? `
+          <button onclick="abrirRetiro(${r.id},'${r.nombre.replace(/'/g,"\\'")}') "
+            class="btn-icon bg-primary-50 hover:bg-primary-100 text-primary-600" data-tip="Registrar retiro">
+            <i data-lucide="calendar-check"></i>
+          </button>` : ''}
+          <button onclick="abrirDelete(${r.id},'${r.nombre.replace(/'/g,"\\'")}')"
+            class="btn-icon bg-red-50 hover:bg-red-100 text-red-500" data-tip="Eliminar">
+            <i data-lucide="trash-2"></i>
+          </button>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  lucide.createIcons({nodes:[tbody]});
+}
+
+/* ── Filters ── */
+function aplicarFiltros() {
+  const q = document.getElementById('buscador').value.toLowerCase();
+  const srv = document.getElementById('filtro-servicio').value;
+  const soloActivos = document.getElementById('solo-activos').checked;
+  let filtered = allRecords;
+  if (q) filtered = filtered.filter(r =>
+    r.nombre.toLowerCase().includes(q) || r.rut.toLowerCase().includes(q) ||
+    r.cama.toLowerCase().includes(q) || (r.sala||'').toLowerCase().includes(q) ||
+    r.dip.toLowerCase().includes(q));
+  if (srv) filtered = filtered.filter(r => r.servicio === srv);
+  if (soloActivos) filtered = filtered.filter(r => !r.fecha_retiro);
+  renderTable(filtered);
+}
+
+['buscador','filtro-servicio'].forEach(id =>
+  document.getElementById(id).addEventListener('input', aplicarFiltros));
+document.getElementById('solo-activos').addEventListener('change', aplicarFiltros);
+
+/* ═══════════════════════════════════════
+   SUMMARY
+═══════════════════════════════════════ */
+function renderKPIs(r) {
+  document.getElementById('s-total').textContent = r.total_registros;
+  document.getElementById('s-incluidos').textContent = r.total_incluidos;
+  document.getElementById('s-excluidos').textContent = r.total_excluidos;
+  document.getElementById('s-activos').textContent = r.registros_sin_retiro;
+  document.getElementById('s-promedio').textContent = r.dias_promedio_dispositivo.toFixed(1)+'d';
+  renderDipChart(r.por_dip);
+}
+
+function renderServicioCards(records) {
+  const container = document.getElementById('servicio-cards');
+  const servicios = Object.keys(SALAS);
+  container.innerHTML = servicios.map(srv => {
+    const regs = records.filter(r => r.servicio === srv && r.estado === 'INCLUIDO');
+    const activos = regs.filter(r => !r.fecha_retiro).length;
+    const pct = regs.length ? Math.round(activos/regs.length*100) : 0;
+    const dot = SRV_COLOR_DOT[srv];
+    return `
+    <div class="card p-4">
+      <div class="flex items-center justify-between mb-2.5">
+        <div class="flex items-center gap-2">
+          <span style="width:8px;height:8px;border-radius:50%;background:${dot};flex-shrink:0;display:inline-block"></span>
+          <p class="text-[12px] font-700 text-slate-700">${srv}</p>
+        </div>
+        <span class="text-[11px] font-700 text-slate-500">${regs.length}</span>
+      </div>
+      <p class="text-[22px] font-800 text-slate-800 leading-none mb-2">${activos}</p>
+      <p class="text-[10.5px] text-slate-400 mb-2.5">activos de ${regs.length} incluidos</p>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${dot}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderActivos(records) {
+  const activos = records.filter(r => !r.fecha_retiro && r.estado === 'INCLUIDO').slice(0,6);
+  const c = document.getElementById('resumen-activos');
+  if (!activos.length) { c.innerHTML = '<p class="text-[13px] text-slate-300 text-center py-10">Sin pacientes activos.</p>'; return; }
+  c.innerHTML = activos.map(r => `
+    <div class="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/80 transition-colors">
+      <div class="w-8 h-8 rounded-xl flex items-center justify-center text-[13px] font-800 flex-shrink-0"
+           style="background:${SRV_COLOR_DOT[r.servicio]||'#94a3b8'}18;color:${SRV_COLOR_DOT[r.servicio]||'#94a3b8'}">
+        ${r.nombre.charAt(0)}
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-[13px] font-600 text-slate-800 truncate">${r.nombre}</p>
+        <p class="text-[11px] text-slate-400">Cama ${r.cama}${r.sala ? ' · '+r.sala : ''}</p>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <span class="badge ${dipClass(r.dip)} text-[10px]">${r.dip}</span>
+        <span class="text-[13px] font-800 ${r.dias_dispositivo>14?'text-amber-500':'text-slate-600'}">${r.dias_dispositivo}d</span>
+      </div>
+    </div>`).join('');
+}
+
+/* ═══════════════════════════════════════
+   CHARTS
+═══════════════════════════════════════ */
+function renderDipChart(porDip) {
+  const labels = Object.keys(porDip), values = Object.values(porDip);
+  const legend = document.getElementById('dip-legend');
+  legend.innerHTML = labels.map((l,i) => `
+    <div class="flex items-center justify-between text-[11px]">
+      <span class="flex items-center gap-2">
+        <span style="width:8px;height:8px;border-radius:50%;background:${CHART_PALETTE[i%CHART_PALETTE.length]};flex-shrink:0;display:inline-block"></span>
+        <span class="text-slate-500">${l}</span>
+      </span>
+      <span class="font-700 text-slate-700">${porDip[l]}</span>
+    </div>`).join('');
+  if (dipChart) dipChart.destroy();
+  dipChart = new Chart(document.getElementById('chart-dip').getContext('2d'), {
+    type: 'doughnut',
+    data: { labels, datasets:[{ data:values, backgroundColor:CHART_PALETTE, borderWidth:0, hoverOffset:8 }] },
+    options: {
+      cutout:'70%',
+      plugins: { legend:{display:false}, tooltip:{ callbacks:{ label: c => ` ${c.label}: ${c.raw}` } } },
+      animation: { duration:600, easing:'easeOutQuart' }
+    }
+  });
+}
+
+function renderDiasChart(records) {
+  const inc = records.filter(r=>r.estado==='INCLUIDO').slice(-10);
+  const labels = inc.map(r=>r.nombre.split(' ')[0]);
+  const values = inc.map(r=>r.dias_dispositivo);
+  const colors = values.map(v => v>14 ? '#f59e0b' : '#0c8ee8');
+  if (diasChart) diasChart.destroy();
+  diasChart = new Chart(document.getElementById('chart-dias').getContext('2d'), {
+    type:'bar',
+    data:{ labels, datasets:[{ data:values, backgroundColor:colors, borderRadius:8, borderSkipped:false }] },
+    options:{
+      plugins:{ legend:{display:false} },
+      scales:{
+        x:{ grid:{display:false}, ticks:{font:{size:11,family:'Inter'},color:'#94a3b8'} },
+        y:{ grid:{color:'#f1f5f9'}, beginAtZero:true, ticks:{font:{size:11,family:'Inter'},color:'#94a3b8'} }
+      },
+      animation:{duration:500}
+    }
+  });
+}
+
+/* ═══════════════════════════════════════
+   MODALES
+═══════════════════════════════════════ */
+let _retiroId = null;
+function abrirRetiro(id, nombre) {
+  _retiroId = id;
+  document.getElementById('modal-retiro-nombre').textContent = nombre;
+  document.getElementById('modal-retiro-fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('modal-retiro-bd').classList.add('open');
+}
+async function confirmarRetiro() {
+  const fecha = document.getElementById('modal-retiro-fecha').value;
+  if (!fecha) return;
+  try {
+    await apiClient.actualizarRegistro(_retiroId, {fecha_retiro:fecha});
+    cerrarModalRetiro(); toast('Retiro registrado.','success');
+    await reloadAll();
+  } catch(err) { toast(err.message,'error'); }
+}
+function cerrarModalRetiro() { document.getElementById('modal-retiro-bd').classList.remove('open'); _retiroId=null; }
+
+function abrirDelete(id, nombre) {
+  _deleteId = id;
+  document.getElementById('modal-delete-nombre').textContent = nombre;
+  document.getElementById('modal-delete-bd').classList.add('open');
+}
+async function ejecutarEliminar() {
+  try {
+    await apiClient.eliminarRegistro(_deleteId);
+    cerrarModalDelete(); toast('Registro eliminado.','info');
+    await reloadAll();
+  } catch(err) { toast(err.message,'error'); }
+}
+function cerrarModalDelete() { document.getElementById('modal-delete-bd').classList.remove('open'); _deleteId=null; }
+
+// Cerrar backdrop click
+['modal-retiro-bd','modal-delete-bd'].forEach(id =>
+  document.getElementById(id).addEventListener('click', e => {
+    if (e.target.id===id) { cerrarModalRetiro(); cerrarModalDelete(); }
+  }));
+
+// Cerrar ESC
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') { cerrarModalRetiro(); cerrarModalDelete(); }
+});
+
+/* ═══════════════════════════════════════
+   EXPORT
+═══════════════════════════════════════ */
+function exportarExcel() {
+  window.open(apiClient.urlExportExcel(),'_blank');
+  toast('Descargando Excel…','info');
+}
+
+/* ═══════════════════════════════════════
+   RELOAD ALL
+═══════════════════════════════════════ */
+async function reloadAll() {
+  const [resumen, records] = await Promise.all([apiClient.obtenerResumen(), apiClient.listarRegistros()]);
+  allRecords = records;
+  renderKPIs(resumen);
+  renderDiasChart(records);
+  renderActivos(records);
+  renderServicioCards(records);
+  buildSrvNav(records);
+  aplicarFiltros();
+  lucide.createIcons();
+}
+
+/* ═══════════════════════════════════════
+   BOOT
+═══════════════════════════════════════ */
+(async () => {
+  lucide.createIcons();
+  await reloadAll();
+})();
+</script>
+</body>
+</html>
