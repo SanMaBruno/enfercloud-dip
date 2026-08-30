@@ -31,20 +31,27 @@
     /* ── Sidebar ── */
     .sidebar { background: linear-gradient(180deg, #0f172a 0%, #0c1a3a 60%, #071530 100%); }
 
-    /* Mobile: sidebar como drawer */
+    /* Mobile: sidebar como drawer — compatible con todos los browsers Android */
     .sidebar-drawer {
-      position: fixed; inset-y: 0; left: 0; z-index: 60;
-      transform: translateX(-100%);
-      transition: transform .28s cubic-bezier(.4,0,.2,1);
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 60;
       width: 220px;
+      transform: translateX(-220px);
+      transition: transform .28s cubic-bezier(.4,0,.2,1);
+      display: flex;
+      flex-direction: column;
     }
     .sidebar-drawer.open { transform: translateX(0); }
 
-    /* Desktop: sidebar estático */
+    /* Desktop: sidebar estático en el flujo */
     @media (min-width: 768px) {
       .sidebar-drawer {
-        position: relative; transform: none !important;
-        flex-shrink: 0; display: flex; flex-direction: column;
+        position: relative;
+        top: auto; left: auto; bottom: auto;
+        transform: translateX(0) !important;
+        flex-shrink: 0;
+        min-height: 100vh;
       }
     }
 
@@ -211,16 +218,16 @@
   </style>
 </head>
 
-<body class="h-full bg-slate-50 text-slate-800">
+<body class="bg-slate-50 text-slate-800" style="height:100vh;overflow:hidden">
 
 <!-- ══════════════ OVERLAY SIDEBAR MOBILE ══════════════ -->
 <div id="sidebar-overlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
 
 <!-- ══════════════ LAYOUT WRAPPER ══════════════ -->
-<div class="flex h-full overflow-hidden">
+<div style="display:flex;height:100%;overflow:hidden">
 
 <!-- ══════════════ SIDEBAR ══════════════ -->
-<aside id="sidebar" class="sidebar sidebar-drawer min-h-screen flex flex-col select-none">
+<aside id="sidebar" class="sidebar sidebar-drawer select-none">
 
   <!-- Brand -->
   <div class="px-5 pt-6 pb-5">
