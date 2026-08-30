@@ -1,4 +1,7 @@
-const API_BASE = "http://localhost:8000/api/v1";
+// Detecta automáticamente si corre local o en producción (Render)
+const API_BASE = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+  ? "http://localhost:8000/api/v1"
+  : `${window.location.origin}/api/v1`;
 
 async function request(method, path, body = null) {
   const options = {
@@ -16,11 +19,10 @@ async function request(method, path, body = null) {
 }
 
 const apiClient = {
-  crearRegistro: (data) => request("POST", "/registros/", data),
-  listarRegistros: (soloActivos = false) =>
-    request("GET", `/registros/?solo_activos=${soloActivos}`),
-  obtenerResumen: () => request("GET", "/registros/resumen"),
-  actualizarRegistro: (id, data) => request("PATCH", `/registros/${id}`, data),
-  eliminarRegistro: (id) => request("DELETE", `/registros/${id}`),
-  urlExportExcel: () => `${API_BASE}/exportar/excel`,
+  crearRegistro:    (data)              => request("POST",   "/registros/", data),
+  listarRegistros:  (soloActivos=false) => request("GET",    `/registros/?solo_activos=${soloActivos}`),
+  obtenerResumen:   ()                  => request("GET",    "/registros/resumen"),
+  actualizarRegistro: (id, data)        => request("PATCH",  `/registros/${id}`, data),
+  eliminarRegistro: (id)               => request("DELETE",  `/registros/${id}`),
+  urlExportExcel:   ()                 => `${API_BASE}/exportar/excel`,
 };
