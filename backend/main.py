@@ -4,10 +4,18 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
 from app.api.routers import records_router, export_router
-from app.infrastructure.persistence.database import engine
+from app.infrastructure.persistence.database import engine, SessionLocal
 from app.infrastructure.persistence.models import Base
+from app.infrastructure.persistence.seeder import seed_demo
 
 Base.metadata.create_all(bind=engine)
+
+# Poblar con datos de demo si la DB está vacía (útil en Render free tier)
+_db = SessionLocal()
+try:
+    seed_demo(_db)
+finally:
+    _db.close()
 
 app = FastAPI(
     title="enferCloud — Vigilancia DIP",
