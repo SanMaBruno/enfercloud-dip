@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 from app.domain.enums import DIPTipo, Estado
 
@@ -29,6 +29,28 @@ class RegistroDIPCreate(BaseModel):
             raise ValueError("Este campo es requerido")
         return v.strip()
 
+    @field_validator("nombre")
+    @classmethod
+    def nombre_max(cls, v: str) -> str:
+        if len(v) > 120:
+            raise ValueError("Nombre demasiado largo (máx 120 caracteres)")
+        return v
+
+    @field_validator("observaciones")
+    @classmethod
+    def observaciones_max(cls, v: Optional[str]) -> Optional[str]:
+        if v and len(v) > 500:
+            raise ValueError("Observaciones demasiado largas (máx 500 caracteres)")
+        return v
+
+    @model_validator(mode="after")
+    def fechas_coherentes(self) -> "RegistroDIPCreate":
+        if self.fecha_retiro and self.fecha_retiro < self.fecha_instalacion:
+            raise ValueError("fecha_retiro no puede ser anterior a fecha_instalacion")
+        if self.fecha_ingreso_sala and self.fecha_ingreso_sala > self.fecha_instalacion:
+            pass  # ingreso puede ser posterior a instalacion en traslados
+        return self
+
 
 class RegistroDIPUpdate(BaseModel):
     cama: Optional[str] = None
@@ -41,6 +63,13 @@ class RegistroDIPUpdate(BaseModel):
     fecha_retiro: Optional[date] = None
     observaciones: Optional[str] = None
     estado: Optional[Estado] = None
+
+    @field_validator("observaciones")
+    @classmethod
+    def observaciones_max(cls, v: Optional[str]) -> Optional[str]:
+        if v and len(v) > 500:
+            raise ValueError("Observaciones demasiado largas (máx 500 caracteres)")
+        return v
 
 
 class RegistroDIPResponse(BaseModel):

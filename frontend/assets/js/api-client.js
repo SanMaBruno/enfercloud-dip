@@ -8,7 +8,7 @@ async function request(method, path, body = null) {
     method,
     headers: { "Content-Type": "application/json" },
   };
-  if (body) options.body = JSON.stringify(body);
+  if (body !== null && body !== undefined) options.body = JSON.stringify(body);
   const res = await fetch(`${API_BASE}${path}`, options);
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: "Error desconocido" }));

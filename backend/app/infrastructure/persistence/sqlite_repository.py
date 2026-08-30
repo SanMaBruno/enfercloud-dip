@@ -30,7 +30,10 @@ class SQLiteRecordRepository(RecordRepository):
     def find_activos(self) -> list[RegistroDIP]:
         models = (
             self._session.query(RegistroDIPModel)
-            .filter(RegistroDIPModel.fecha_retiro.is_(None))
+            .filter(
+                RegistroDIPModel.fecha_retiro.is_(None),
+                RegistroDIPModel.estado == Estado.INCLUIDO.value,
+            )
             .order_by(RegistroDIPModel.cama)
             .all()
         )
@@ -47,9 +50,10 @@ class SQLiteRecordRepository(RecordRepository):
 
     def delete(self, record_id: int) -> None:
         model = self._session.get(RegistroDIPModel, record_id)
-        if model:
-            self._session.delete(model)
-            self._session.commit()
+        if model is None:
+            raise ValueError(f"Registro {record_id} no encontrado")
+        self._session.delete(model)
+        self._session.commit()
 
     @staticmethod
     def _to_model(record: RegistroDIP) -> RegistroDIPModel:

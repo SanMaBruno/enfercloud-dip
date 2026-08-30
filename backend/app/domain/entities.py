@@ -26,11 +26,11 @@ class RegistroDIP:
     @property
     def dias_dispositivo(self) -> int:
         fin = self.fecha_retiro or date.today()
-        return (fin - self.fecha_instalacion).days
+        return max(0, (fin - self.fecha_instalacion).days)
 
     @property
     def dias_hospitalizacion(self) -> Optional[int]:
         if self.fecha_ingreso_sala is None:
             return None
         fin = self.fecha_retiro or date.today()
-        return (fin - self.fecha_ingreso_sala).days
+        return max(0, (fin - self.fecha_ingreso_sala).days)

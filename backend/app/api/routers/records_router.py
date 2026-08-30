@@ -14,7 +14,7 @@ from app.application.use_cases.add_record import AddRecord
 from app.application.use_cases.get_summary import GetSummary
 from app.application.use_cases.list_records import ListRecords
 from app.domain.entities import RegistroDIP
-from app.domain.validators import UbicacionInvalidaError
+from app.domain.validators import UbicacionInvalidaError, validar_ubicacion_dip
 
 router = APIRouter(prefix="/registros", tags=["registros"])
 
@@ -122,7 +122,10 @@ def actualizar_registro(
     if body.procedencia is not None:
         entity.procedencia = body.procedencia
     if body.ubicacion_dip is not None:
-        entity.ubicacion_dip = body.ubicacion_dip
+        try:
+            entity.ubicacion_dip = validar_ubicacion_dip(entity.dip, body.ubicacion_dip)
+        except UbicacionInvalidaError as e:
+            raise HTTPException(status_code=422, detail=str(e))
     if body.fecha_ingreso_sala is not None:
         entity.fecha_ingreso_sala = body.fecha_ingreso_sala
     if body.fecha_retiro is not None:
