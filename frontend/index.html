@@ -254,7 +254,7 @@
     </div>
 
     <p class="text-[10px] font-700 text-slate-600 uppercase tracking-widest px-3 pt-5 pb-1.5">Herramientas</p>
-    <div class="nav-item" onclick="exportarExcel()">
+    <div class="nav-item" onclick="abrirModalExport()">
       <i data-lucide="file-spreadsheet"></i> Exportar Excel
     </div>
 
@@ -595,7 +595,7 @@
             <input id="solo-activos" type="checkbox" class="rounded accent-primary-500" />
             Solo activos
           </label>
-          <button onclick="exportarExcel()" class="btn btn-success btn-sm ml-auto sm:ml-0" data-tip="Descargar planilla Excel">
+          <button onclick="abrirModalExport()" class="btn btn-success btn-sm ml-auto sm:ml-0" data-tip="Descargar planilla Excel">
             <i data-lucide="download"></i> <span class="hidden sm:inline">Excel</span>
           </button>
         </div>
@@ -651,7 +651,7 @@
     <i data-lucide="table-2"></i>
     <span>Registros</span>
   </button>
-  <button class="bottom-nav-item" onclick="exportarExcel()">
+  <button class="bottom-nav-item" onclick="abrirModalExport()">
     <i data-lucide="file-spreadsheet"></i>
     <span>Excel</span>
   </button>
@@ -711,6 +711,40 @@
   </div>
 </div>
 
+<!-- ══════════════ MODAL EXPORTAR EXCEL ══════════════ -->
+<div id="modal-export-bd" class="modal-backdrop">
+  <div class="modal-box p-5 md:p-6">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="file-spreadsheet" style="width:16px;height:16px;color:#10b981"></i>
+        </div>
+        <h3 class="text-[15px] font-700 text-slate-800">Exportar Excel</h3>
+      </div>
+      <button onclick="cerrarModalExport()" class="btn-icon bg-slate-100 hover:bg-slate-200 text-slate-500">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+
+    <p class="text-[12px] text-slate-500 mb-4">Cada servicio y sala genera su propio archivo Excel independiente.</p>
+
+    <!-- Por servicio completo -->
+    <p class="text-[10px] font-700 text-slate-400 uppercase tracking-widest mb-2">Por servicio</p>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-5" id="export-servicios"></div>
+
+    <!-- Por sala -->
+    <p class="text-[10px] font-700 text-slate-400 uppercase tracking-widest mb-2">Por sala específica</p>
+    <div class="flex gap-2">
+      <select id="export-sala-sel" class="field-input py-2 text-[13px] flex-1">
+        <option value="">— Seleccionar sala —</option>
+      </select>
+      <button onclick="exportarPorSala()" class="btn btn-success btn-sm flex-shrink-0">
+        <i data-lucide="download"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════ TOASTS ══════════════ -->
 <div id="toast-root" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none max-w-[calc(100vw-2rem)]"></div>
 
@@ -733,6 +767,19 @@ const UBICACIONES_DIP = {
   'VMI': ['TOT','TQT'],
 };
 const DIP_SIN_UBIC = ['CUP USUARIO','CVC CON GRIPPER','CHD AGUDO','CHD CRÓNICO','CHD AFERESIS','PICCLINE'];
+
+// Restricciones de DIP por nivel de sala
+const SALAS_CRITICO_TOTAL  = new Set(['UCI','UTI Q']);
+const SALAS_SEMICRITICO    = new Set(['UTIM','Borquez Silva','Hector Ducci','UHI']);
+const DIPS_PROHIBIDOS_SEMI = new Set(['VMI']);
+const DIPS_PROHIBIDOS_GRAL = new Set(['VMI','CVC','CVC CON GRIPPER']);
+
+function getDipsPermitidos(sala) {
+  const todos = ['CUP','CVC','VMI','CUP USUARIO','CVC CON GRIPPER','CHD AGUDO','CHD CRÓNICO','CHD AFERESIS','PICCLINE'];
+  if (!sala || SALAS_CRITICO_TOTAL.has(sala)) return todos;
+  if (SALAS_SEMICRITICO.has(sala)) return todos.filter(d => !DIPS_PROHIBIDOS_SEMI.has(d));
+  return todos.filter(d => !DIPS_PROHIBIDOS_GRAL.has(d));
+}
 
 const SRV_CLASS = { UCI:'srv-uci', UTI:'srv-uti', UHI:'srv-uhi', Medicina:'srv-medicina', Cirugía:'srv-cirugia' };
 const DIP_CLASS = { CUP:'dip-cup', CVC:'dip-cvc', VMI:'dip-vmi' };
@@ -869,7 +916,40 @@ document.getElementById('servicio').addEventListener('change', e => {
   } else {
     sel.disabled = true;
   }
+  actualizarDipsSegunSala('');
 });
+
+document.getElementById('sala').addEventListener('change', e => {
+  actualizarDipsSegunSala(e.target.value);
+});
+
+function actualizarDipsSegunSala(sala) {
+  const dipSel = document.getElementById('dip');
+  const valorActual = dipSel.value;
+  const permitidos = getDipsPermitidos(sala);
+
+  const LABELS = {
+    'CUP':'CUP — Catéter Urinario', 'CVC':'CVC — Catéter Venoso Central',
+    'VMI':'VMI — Ventilación Mecánica', 'CUP USUARIO':'CUP Usuario',
+    'CVC CON GRIPPER':'CVC con Gripper', 'CHD AGUDO':'CHD Agudo',
+    'CHD CRÓNICO':'CHD Crónico', 'CHD AFERESIS':'CHD Aféresis', 'PICCLINE':'PICCLINE',
+  };
+
+  dipSel.innerHTML = '<option value="">— Seleccionar —</option>';
+  permitidos.forEach(d => {
+    const o = new Option(LABELS[d] || d, d);
+    if (d === valorActual) o.selected = true;
+    dipSel.appendChild(o);
+  });
+
+  // Si el DIP actual ya no está permitido, resetear
+  if (valorActual && !permitidos.includes(valorActual)) {
+    dipSel.value = '';
+    document.getElementById('ubicacion_dip').innerHTML = '<option value="">— Seleccione DIP —</option>';
+    document.getElementById('ubicacion_dip').disabled = true;
+    document.getElementById('ubicacion-hint').textContent = '';
+  }
+}
 
 document.getElementById('dip').addEventListener('change', e => {
   const dip = e.target.value;
@@ -1163,12 +1243,56 @@ document.addEventListener('keydown', e => {
 });
 
 /* ═══════════════════════════════════════
-   EXPORT
+   EXPORT MODAL
 ═══════════════════════════════════════ */
-function exportarExcel() {
-  window.open(apiClient.urlExportExcel(),'_blank');
-  toast('Descargando Excel…','info');
+function abrirModalExport() {
+  // Botones por servicio
+  const container = document.getElementById('export-servicios');
+  const colores = { UCI:'bg-red-50 text-red-700 border-red-200', UTI:'bg-orange-50 text-orange-700 border-orange-200',
+    UHI:'bg-purple-50 text-purple-700 border-purple-200', Medicina:'bg-blue-50 text-blue-700 border-blue-200',
+    Cirugía:'bg-emerald-50 text-emerald-700 border-emerald-200' };
+  container.innerHTML = Object.keys(SALAS).map(srv => `
+    <button onclick="exportarServicio('${srv}')"
+      class="flex items-center gap-2 px-3 py-2.5 rounded-xl border text-[12px] font-600 transition-all hover:opacity-80 ${colores[srv]||'bg-slate-50 text-slate-700 border-slate-200'}">
+      <i data-lucide="file-spreadsheet" style="width:13px;height:13px"></i>${srv}
+    </button>`).join('');
+  lucide.createIcons({nodes:[container]});
+
+  // Selector de salas
+  const salaSel = document.getElementById('export-sala-sel');
+  salaSel.innerHTML = '<option value="">— Seleccionar sala —</option>';
+  Object.entries(SALAS).forEach(([srv, salas]) => {
+    const grp = document.createElement('optgroup');
+    grp.label = srv;
+    salas.forEach(s => { grp.appendChild(new Option(s, JSON.stringify({srv, sala:s}))); });
+    salaSel.appendChild(grp);
+  });
+
+  document.getElementById('modal-export-bd').classList.add('open');
 }
+
+function cerrarModalExport() {
+  document.getElementById('modal-export-bd').classList.remove('open');
+}
+
+function exportarServicio(srv) {
+  window.open(apiClient.urlExportExcel(srv, null), '_blank');
+  toast(`Descargando Excel — ${srv}…`, 'info');
+  cerrarModalExport();
+}
+
+function exportarPorSala() {
+  const val = document.getElementById('export-sala-sel').value;
+  if (!val) { toast('Selecciona una sala primero.','warning'); return; }
+  const {srv, sala} = JSON.parse(val);
+  window.open(apiClient.urlExportExcel(srv, sala), '_blank');
+  toast(`Descargando Excel — ${sala}…`, 'info');
+  cerrarModalExport();
+}
+
+document.getElementById('modal-export-bd').addEventListener('click', e => {
+  if (e.target.id === 'modal-export-bd') cerrarModalExport();
+});
 
 /* ═══════════════════════════════════════
    RELOAD ALL

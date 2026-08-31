@@ -14,7 +14,7 @@ from app.application.use_cases.add_record import AddRecord
 from app.application.use_cases.get_summary import GetSummary
 from app.application.use_cases.list_records import ListRecords
 from app.domain.entities import RegistroDIP
-from app.domain.validators import UbicacionInvalidaError, validar_ubicacion_dip
+from app.domain.validators import UbicacionInvalidaError, DIPNoPermitidoEnSalaError, validar_ubicacion_dip
 
 router = APIRouter(prefix="/registros", tags=["registros"])
 
@@ -64,7 +64,7 @@ def crear_registro(
     )
     try:
         saved = use_case.execute(entity)
-    except UbicacionInvalidaError as e:
+    except (UbicacionInvalidaError, DIPNoPermitidoEnSalaError) as e:
         raise HTTPException(status_code=422, detail=str(e))
     return _entity_to_response(saved)
 

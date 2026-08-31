@@ -32,3 +32,13 @@ DIPS_SIN_UBICACION = {
     DIPTipo.CHD_AFERESIS,
     DIPTipo.PICCLINE,
 }
+
+# Salas con capacidad de paciente crítico completo (todos los DIPs permitidos)
+SALAS_CRITICO_TOTAL = {"UCI", "UTI Q"}
+
+# Salas semi-críticas (sin VMI)
+SALAS_SEMICRITICO = {"UTIM", "Borquez Silva", "Hector Ducci", "UHI"}
+
+# DIPs NO permitidos por nivel de sala
+DIPS_PROHIBIDOS_SEMICRITICO = {DIPTipo.VMI}
+DIPS_PROHIBIDOS_GENERAL = {DIPTipo.VMI, DIPTipo.CVC, DIPTipo.CVC_CON_GRIPPER}

@@ -9,7 +9,6 @@ from app.application.use_cases.export_excel import ExcelExporter
 from app.domain.entities import RegistroDIP
 
 _AZUL_HEADER = "1F4E79"
-_AZUL_CLARO = "BDD7EE"
 _VERDE = "E2EFDA"
 
 _HEADERS = [
@@ -20,14 +19,20 @@ _HEADERS = [
     "Estado", "Observaciones",
 ]
 
+_COL_WIDTHS = [5, 8, 14, 22, 15, 14, 30, 7, 20, 15, 18, 20, 14, 14, 18, 12, 35]
+
 
 class OpenpyxlExcelExporter(ExcelExporter):
-    def export(self, records: list[RegistroDIP]) -> bytes:
+    def export(self, records: list[RegistroDIP], titulo: str = "Vigilancia DIP") -> bytes:
         wb = Workbook()
         ws = wb.active
-        ws.title = "Vigilancia DIP"
+        ws.title = titulo[:31]  # Excel limita a 31 chars
 
-        self._write_title(ws)
+        encabezado = (
+            f"PLANILLA VIGILANCIA DISPOSITIVOS INVASIVOS — {titulo.upper()} — "
+            f"{date.today().strftime('%d/%m/%Y')}"
+        )
+        self._write_title(ws, encabezado)
         self._write_headers(ws)
         self._write_records(ws, records)
         self._apply_column_widths(ws)
@@ -36,10 +41,10 @@ class OpenpyxlExcelExporter(ExcelExporter):
         wb.save(buffer)
         return buffer.getvalue()
 
-    def _write_title(self, ws) -> None:
+    def _write_title(self, ws, texto: str) -> None:
         ws.merge_cells("A1:Q1")
         cell = ws["A1"]
-        cell.value = f"PLANILLA VIGILANCIA DISPOSITIVOS INVASIVOS — {date.today().strftime('%d/%m/%Y')}"
+        cell.value = texto
         cell.font = Font(bold=True, size=13, color="FFFFFF")
         cell.fill = PatternFill("solid", fgColor=_AZUL_HEADER)
         cell.alignment = Alignment(horizontal="center", vertical="center")
@@ -61,26 +66,14 @@ class OpenpyxlExcelExporter(ExcelExporter):
         border = Border(left=thin, right=thin, top=thin, bottom=thin)
         for i, record in enumerate(records):
             row = i + 3
-            fill_color = _VERDE if i % 2 == 0 else "FFFFFF"
-            fill = PatternFill("solid", fgColor=fill_color)
+            fill = PatternFill("solid", fgColor=_VERDE if i % 2 == 0 else "FFFFFF")
             values = [
-                i + 1,
-                record.cama,
-                record.servicio or "",
-                record.sala or "",
-                record.procedencia or "",
-                record.rut,
-                record.nombre,
-                record.edad,
-                record.dip.value,
-                record.ubicacion_dip or "N/A",
-                record.fecha_ingreso_sala,
-                record.fecha_instalacion,
-                record.fecha_retiro,
-                record.dias_dispositivo,
-                record.dias_hospitalizacion,
-                record.estado.value,
-                record.observaciones,
+                i + 1, record.cama, record.servicio or "", record.sala or "",
+                record.procedencia or "", record.rut, record.nombre, record.edad,
+                record.dip.value, record.ubicacion_dip or "N/A",
+                record.fecha_ingreso_sala, record.fecha_instalacion, record.fecha_retiro,
+                record.dias_dispositivo, record.dias_hospitalizacion,
+                record.estado.value, record.observaciones,
             ]
             for col, value in enumerate(values, start=1):
                 cell = ws.cell(row=row, column=col, value=value)
@@ -89,6 +82,5 @@ class OpenpyxlExcelExporter(ExcelExporter):
                 cell.alignment = Alignment(horizontal="center")
 
     def _apply_column_widths(self, ws) -> None:
-        widths = [5, 8, 14, 22, 15, 14, 30, 7, 20, 15, 18, 20, 14, 14, 18, 12, 35]
-        for col, width in enumerate(widths, start=1):
+        for col, width in enumerate(_COL_WIDTHS, start=1):
             ws.column_dimensions[get_column_letter(col)].width = width

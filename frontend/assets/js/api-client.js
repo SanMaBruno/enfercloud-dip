@@ -24,5 +24,11 @@ const apiClient = {
   obtenerResumen:   ()                  => request("GET",    "/registros/resumen"),
   actualizarRegistro: (id, data)        => request("PATCH",  `/registros/${id}`, data),
   eliminarRegistro: (id)               => request("DELETE",  `/registros/${id}`),
-  urlExportExcel:   ()                 => `${API_BASE}/exportar/excel`,
+  urlExportExcel: (servicio, sala) => {
+    const params = new URLSearchParams();
+    if (servicio) params.set('servicio', servicio);
+    if (sala) params.set('sala', sala);
+    const qs = params.toString();
+    return `${API_BASE}/exportar/excel${qs ? '?' + qs : ''}`;
+  },
 };
