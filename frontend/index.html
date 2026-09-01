@@ -220,6 +220,34 @@
 
 <body class="bg-slate-50 text-slate-800" style="height:100vh;overflow:hidden">
 
+<!-- ══════════════ LOGIN SCREEN ══════════════ -->
+<div id="login-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0f172a 0%,#0c1a3a 60%,#071530 100%);align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:24px;padding:36px 32px;width:100%;max-width:380px;box-shadow:0 24px 64px rgba(0,0,0,.35)">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,#0c8ee8,#0359a3);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+        <i data-lucide="activity" style="width:22px;height:22px;color:#fff"></i>
+      </div>
+      <h2 style="font-size:20px;font-weight:800;color:#0f172a;margin:0 0 4px">enferCloud</h2>
+      <p style="font-size:12px;color:#64748b;margin:0">Vigilancia DIP — Inicia sesión</p>
+    </div>
+    <form id="login-form" onsubmit="handleLogin(event)" style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label class="field-label">Usuario</label>
+        <input id="login-username" type="text" class="field-input" placeholder="medicina_manuel_matu" autocomplete="username" required />
+      </div>
+      <div>
+        <label class="field-label">Contraseña</label>
+        <input id="login-password" type="password" class="field-input" placeholder="••••••••" autocomplete="current-password" required />
+      </div>
+      <div id="login-error" style="display:none;background:#fee2e2;color:#b91c1c;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:500"></div>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:11px" id="login-btn">
+        <i data-lucide="log-in" style="width:15px;height:15px"></i>
+        Ingresar
+      </button>
+    </form>
+  </div>
+</div>
+
 <!-- ══════════════ OVERLAY SIDEBAR MOBILE ══════════════ -->
 <div id="sidebar-overlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
 
@@ -260,18 +288,29 @@
 
     <p class="text-[10px] font-700 text-slate-600 uppercase tracking-widest px-3 pt-5 pb-1.5">Servicios</p>
     <div id="srv-nav" class="space-y-0.5"></div>
+
+    <div id="admin-nav-section" style="display:none">
+      <p class="text-[10px] font-700 text-slate-600 uppercase tracking-widest px-3 pt-5 pb-1.5">Admin</p>
+      <div class="nav-item" data-section="usuarios" onclick="navigate('usuarios',this)">
+        <i data-lucide="users"></i> Gestionar Usuarios
+      </div>
+    </div>
   </nav>
 
-  <!-- User / Date -->
+  <!-- User / Date + Logout -->
   <div class="px-4 py-4 border-t border-white/[.07] mt-2">
     <div class="flex items-center gap-2.5">
       <div class="w-8 h-8 rounded-xl bg-primary-600 flex items-center justify-center flex-shrink-0">
-        <i data-lucide="stethoscope" style="width:14px;height:14px;color:#fff"></i>
+        <i data-lucide="user" style="width:14px;height:14px;color:#fff"></i>
       </div>
-      <div class="min-w-0">
-        <p class="text-white text-[12px] font-semibold truncate">Vigilancia DIP</p>
+      <div class="min-w-0 flex-1">
+        <p class="text-white text-[12px] font-semibold truncate" id="sidebar-username">—</p>
         <p class="text-slate-500 text-[10px]" id="sidebar-date"></p>
       </div>
+      <button onclick="logout()" title="Cerrar sesión"
+        style="background:rgba(255,255,255,.07);border:none;border-radius:8px;width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i data-lucide="log-out" style="width:13px;height:13px;color:#94a3b8"></i>
+      </button>
     </div>
   </div>
 </aside>
@@ -633,6 +672,32 @@
       </div>
     </section>
 
+    <!-- ════ USUARIOS (admin) ════ -->
+    <section id="section-usuarios" class="section-panel space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-[17px] font-700 text-slate-800">Gestión de Usuarios</h2>
+          <p class="text-[12px] text-slate-400 mt-0.5">Crea usuarios y asígnalos a cada sala</p>
+        </div>
+        <button onclick="abrirModalCrearUsuario()" class="btn btn-primary btn-sm">
+          <i data-lucide="user-plus"></i> Nuevo usuario
+        </button>
+      </div>
+
+      <div class="card overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="data-table">
+            <thead><tr>
+              <th>Usuario</th><th>Rol</th><th>Sala asignada</th><th>Estado</th><th>Acciones</th>
+            </tr></thead>
+            <tbody id="usuarios-tbody">
+              <tr><td colspan="5" class="text-center py-8 text-slate-400">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
   </main>
 </div><!-- /main area -->
 </div><!-- /layout wrapper -->
@@ -745,12 +810,108 @@
   </div>
 </div>
 
+<!-- ══════════════ MODAL CREAR USUARIO ══════════════ -->
+<div id="modal-usuario-bd" class="modal-backdrop">
+  <div class="modal-box p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-[16px] font-700 text-slate-800">Nuevo Usuario</h3>
+      <button onclick="cerrarModalUsuario()" class="btn-icon bg-slate-100 text-slate-500"><i data-lucide="x"></i></button>
+    </div>
+    <form id="form-usuario" onsubmit="guardarUsuario(event)" class="space-y-3">
+      <div>
+        <label class="field-label">Nombre de usuario</label>
+        <input id="u-username" type="text" class="field-input" placeholder="medicina_manuel_matu" required />
+      </div>
+      <div>
+        <label class="field-label">Contraseña</label>
+        <input id="u-password" type="password" class="field-input" placeholder="Mínimo 6 caracteres" required minlength="6" />
+      </div>
+      <div>
+        <label class="field-label">Rol</label>
+        <select id="u-rol" class="field-input" onchange="toggleSalaUsuario()">
+          <option value="enfermero">Enfermero/a</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </div>
+      <div id="u-sala-group">
+        <label class="field-label">Sala asignada</label>
+        <select id="u-sala" class="field-input" required>
+          <option value="">— Seleccionar sala —</option>
+        </select>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button type="button" onclick="cerrarModalUsuario()" class="btn btn-ghost flex-1 justify-center">Cancelar</button>
+        <button type="submit" class="btn btn-primary flex-1 justify-content:center">Crear usuario</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- ══════════════ TOASTS ══════════════ -->
 <div id="toast-root" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none max-w-[calc(100vw-2rem)]"></div>
 
 <!-- ══════════════ SCRIPTS ══════════════ -->
 <script src="assets/js/api-client.js"></script>
 <script>
+/* ═══════════════════════════════════════
+   AUTH
+═══════════════════════════════════════ */
+function getStoredUser() {
+  try { return JSON.parse(localStorage.getItem('ec_user') || 'null'); } catch { return null; }
+}
+
+function isAdmin() {
+  const u = getStoredUser();
+  return u && u.rol === 'admin';
+}
+
+function getUserSala() {
+  const u = getStoredUser();
+  return u ? u.sala : null;
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const btn = document.getElementById('login-btn');
+  const errEl = document.getElementById('login-error');
+  btn.disabled = true;
+  btn.textContent = 'Ingresando...';
+  errEl.style.display = 'none';
+  try {
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
+    const data = await apiClient.login(username, password);
+    localStorage.setItem('ec_token', data.access_token);
+    localStorage.setItem('ec_user', JSON.stringify({ username: data.username, rol: data.rol, sala: data.sala }));
+    document.getElementById('login-screen').style.display = 'none';
+    initApp();
+  } catch (err) {
+    errEl.textContent = err.message || 'Usuario o contraseña incorrectos';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="log-in" style="width:15px;height:15px"></i> Ingresar';
+    lucide.createIcons();
+  }
+}
+
+function logout() {
+  localStorage.removeItem('ec_token');
+  localStorage.removeItem('ec_user');
+  location.reload();
+}
+
+function checkAuth() {
+  const token = localStorage.getItem('ec_token');
+  const loginScreen = document.getElementById('login-screen');
+  if (!token) {
+    loginScreen.style.display = 'flex';
+    lucide.createIcons();
+    return false;
+  }
+  return true;
+}
+
 /* ═══════════════════════════════════════
    CONFIG
 ═══════════════════════════════════════ */
@@ -790,6 +951,7 @@ const PAGE_META = {
   resumen:   ['Resumen','Visión general de vigilancia activa'],
   ingreso:   ['Nuevo Registro','Ingresar datos de dispositivo invasivo'],
   registros: ['Ver Registros','Historial completo — todos los dispositivos'],
+  usuarios:  ['Gestión de Usuarios','Administrar accesos por sala'],
 };
 
 /* ═══════════════════════════════════════
@@ -823,8 +985,6 @@ function closeSidebar() {
   };
   tick(); setInterval(tick, 1000);
 })();
-document.getElementById('sidebar-date').textContent =
-  new Date().toLocaleDateString('es-CL',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
 
 /* ═══════════════════════════════════════
    NAVIGATION
@@ -1310,12 +1470,153 @@ async function reloadAll() {
 }
 
 /* ═══════════════════════════════════════
+   USUARIOS (admin)
+═══════════════════════════════════════ */
+function abrirModalCrearUsuario() {
+  const salaSelect = document.getElementById('u-sala');
+  salaSelect.innerHTML = '<option value="">— Seleccionar sala —</option>';
+  Object.entries(SALAS).forEach(([srv, salas]) => {
+    salas.forEach(sala => {
+      const opt = document.createElement('option');
+      opt.value = sala;
+      opt.textContent = `${srv} — ${sala}`;
+      salaSelect.appendChild(opt);
+    });
+  });
+  document.getElementById('form-usuario').reset();
+  toggleSalaUsuario();
+  document.getElementById('modal-usuario-bd').classList.add('open');
+  lucide.createIcons();
+}
+
+function cerrarModalUsuario() {
+  document.getElementById('modal-usuario-bd').classList.remove('open');
+}
+
+function toggleSalaUsuario() {
+  const rol = document.getElementById('u-rol').value;
+  const grupo = document.getElementById('u-sala-group');
+  const salaSelect = document.getElementById('u-sala');
+  grupo.style.display = rol === 'enfermero' ? 'block' : 'none';
+  salaSelect.required = rol === 'enfermero';
+}
+
+async function guardarUsuario(e) {
+  e.preventDefault();
+  const rol = document.getElementById('u-rol').value;
+  const sala = rol === 'enfermero' ? document.getElementById('u-sala').value : null;
+  try {
+    await apiClient.crearUsuario({
+      username: document.getElementById('u-username').value.trim(),
+      password: document.getElementById('u-password').value,
+      rol,
+      sala: sala || null,
+    });
+    cerrarModalUsuario();
+    showToast('Usuario creado correctamente', 'success');
+    cargarUsuarios();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function cargarUsuarios() {
+  const tbody = document.getElementById('usuarios-tbody');
+  try {
+    const usuarios = await apiClient.listarUsuarios();
+    if (!usuarios.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-slate-400">Sin usuarios</td></tr>';
+      return;
+    }
+    tbody.innerHTML = usuarios.map(u => `
+      <tr>
+        <td class="font-mono text-[13px]">${u.username}</td>
+        <td><span class="badge ${u.rol === 'admin' ? 'est-exc' : 'est-inc'}">${u.rol}</span></td>
+        <td>${u.sala || '— Todos —'}</td>
+        <td><span class="badge ${u.activo ? 'est-inc' : 'est-exc'}">${u.activo ? 'Activo' : 'Inactivo'}</span></td>
+        <td>
+          <button onclick="eliminarUsuario(${u.id},'${u.username}')" class="btn-icon bg-red-50 text-red-500" title="Eliminar">
+            <i data-lucide="trash-2"></i>
+          </button>
+        </td>
+      </tr>
+    `).join('');
+    lucide.createIcons({nodes:[tbody]});
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-red-400">Error al cargar usuarios</td></tr>';
+  }
+}
+
+async function eliminarUsuario(id, username) {
+  if (!confirm(`¿Eliminar usuario "${username}"? Esta acción es irreversible.`)) return;
+  try {
+    await apiClient.eliminarUsuario(id);
+    showToast('Usuario eliminado', 'success');
+    cargarUsuarios();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+/* ═══════════════════════════════════════
    BOOT
 ═══════════════════════════════════════ */
-(async () => {
+function initApp() {
+  const user = getStoredUser();
+
+  // Sidebar user info
+  document.getElementById('sidebar-username').textContent =
+    user ? `${user.username}${user.sala ? ' · ' + user.sala : ''}` : '—';
+  document.getElementById('sidebar-date').textContent =
+    new Date().toLocaleDateString('es-CL',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+
+  // Admin-only nav
+  if (isAdmin()) {
+    document.getElementById('admin-nav-section').style.display = 'block';
+  }
+
+  // Enfermero: lock sala/servicio fields in form
+  const salaAsignada = getUserSala();
+  if (salaAsignada && !isAdmin()) {
+    for (const [srv, salas] of Object.entries(SALAS)) {
+      if (salas.includes(salaAsignada)) {
+        const srvSelect = document.getElementById('servicio');
+        if (srvSelect) {
+          srvSelect.value = srv;
+          srvSelect.disabled = true;
+          // populate sala select
+          const salaSelect = document.getElementById('sala');
+          if (salaSelect) {
+            salaSelect.innerHTML = '';
+            salas.forEach(s => {
+              const opt = document.createElement('option');
+              opt.value = s; opt.textContent = s;
+              salaSelect.appendChild(opt);
+            });
+            salaSelect.value = salaAsignada;
+            salaSelect.disabled = true;
+          }
+          actualizarDipsSegunSala(salaAsignada);
+        }
+        break;
+      }
+    }
+  }
+
   lucide.createIcons();
-  await reloadAll();
-})();
+  reloadAll();
+}
+
+// Patch navigate to load usuarios when entering that section
+const _origNavigate = navigate;
+function navigate(section, el) {
+  _origNavigate(section, el);
+  if (section === 'usuarios') cargarUsuarios();
+}
+
+if (checkAuth()) {
+  initApp();
+}
 </script>
 </body>
 </html>

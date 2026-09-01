@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.dependencies import get_add_record, get_list_records, get_repository, get_summary
+from app.api.dependencies import get_add_record, get_current_user, get_list_records, get_repository, get_summary
 from app.api.schemas import (
     RegistroDIPCreate,
     RegistroDIPResponse,
@@ -45,7 +45,16 @@ def _entity_to_response(entity: RegistroDIP) -> RegistroDIPResponse:
 def crear_registro(
     body: RegistroDIPCreate,
     use_case: AddRecord = Depends(get_add_record),
+    current_user: dict = Depends(get_current_user),
 ):
+    if current_user.get("rol") == "enfermero":
+        sala_asignada = current_user.get("sala")
+        if body.sala != sala_asignada:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Solo puedes registrar en tu sala asignada: {sala_asignada}",
+            )
+
     entity = RegistroDIP(
         servicio=body.servicio,
         sala=body.sala,
@@ -73,12 +82,20 @@ def crear_registro(
 def listar_registros(
     solo_activos: bool = False,
     use_case: ListRecords = Depends(get_list_records),
+    current_user: dict = Depends(get_current_user),
 ):
-    return [_entity_to_response(r) for r in use_case.execute(solo_activos)]
+    records = use_case.execute(solo_activos)
+    if current_user.get("rol") == "enfermero":
+        sala_asignada = current_user.get("sala")
+        records = [r for r in records if r.sala == sala_asignada]
+    return [_entity_to_response(r) for r in records]
 
 
 @router.get("/resumen", response_model=ResumenResponse)
-def obtener_resumen(use_case: GetSummary = Depends(get_summary)):
+def obtener_resumen(
+    use_case: GetSummary = Depends(get_summary),
+    current_user: dict = Depends(get_current_user),
+):
     resumen = use_case.execute()
     return ResumenResponse(
         total_registros=resumen.total_registros,
@@ -94,10 +111,13 @@ def obtener_resumen(use_case: GetSummary = Depends(get_summary)):
 def obtener_registro(
     record_id: int,
     repo: RecordRepository = Depends(get_repository),
+    current_user: dict = Depends(get_current_user),
 ):
     entity = repo.find_by_id(record_id)
     if entity is None:
         raise HTTPException(status_code=404, detail="Registro no encontrado")
+    if current_user.get("rol") == "enfermero" and entity.sala != current_user.get("sala"):
+        raise HTTPException(status_code=403, detail="Sin acceso a este registro")
     return _entity_to_response(entity)
 
 
@@ -106,10 +126,13 @@ def actualizar_registro(
     record_id: int,
     body: RegistroDIPUpdate,
     repo: RecordRepository = Depends(get_repository),
+    current_user: dict = Depends(get_current_user),
 ):
     entity = repo.find_by_id(record_id)
     if entity is None:
         raise HTTPException(status_code=404, detail="Registro no encontrado")
+    if current_user.get("rol") == "enfermero" and entity.sala != current_user.get("sala"):
+        raise HTTPException(status_code=403, detail="Sin acceso a este registro")
 
     if body.cama is not None:
         entity.cama = body.cama
@@ -143,7 +166,11 @@ def actualizar_registro(
 def eliminar_registro(
     record_id: int,
     repo: RecordRepository = Depends(get_repository),
+    current_user: dict = Depends(get_current_user),
 ):
-    if repo.find_by_id(record_id) is None:
+    entity = repo.find_by_id(record_id)
+    if entity is None:
         raise HTTPException(status_code=404, detail="Registro no encontrado")
+    if current_user.get("rol") == "enfermero" and entity.sala != current_user.get("sala"):
+        raise HTTPException(status_code=403, detail="Sin acceso a este registro")
     repo.delete(record_id)

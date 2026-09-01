@@ -1,11 +1,22 @@
 from datetime import date
 from typing import Optional
 
-from sqlalchemy import Date, Enum, Integer, String, Text
+from sqlalchemy import Boolean, Date, Enum, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.domain.enums import DIPTipo, Estado
 from app.infrastructure.persistence.database import Base
+
+
+class UsuarioModel(Base):
+    __tablename__ = "usuarios"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String(200), nullable=False)
+    rol: Mapped[str] = mapped_column(String(20), nullable=False, default="enfermero")
+    sala: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    activo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
 
 class RegistroDIPModel(Base):

@@ -3,7 +3,22 @@ import random
 
 from sqlalchemy.orm import Session
 
-from app.infrastructure.persistence.models import RegistroDIPModel
+from app.infrastructure.auth.jwt_handler import hash_password
+from app.infrastructure.persistence.models import RegistroDIPModel, UsuarioModel
+
+
+def seed_admin(session: Session) -> None:
+    if session.query(UsuarioModel).filter(UsuarioModel.rol == "admin").first():
+        return
+    admin = UsuarioModel(
+        username="admin",
+        hashed_password=hash_password("admin1234"),
+        rol="admin",
+        sala=None,
+        activo=True,
+    )
+    session.add(admin)
+    session.commit()
 
 SERVICIOS = {
     "UCI":      ["UCI", "UTI Q"],
