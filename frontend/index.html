@@ -1000,6 +1000,7 @@ function navigate(section, el) {
   document.getElementById('page-subtitle').textContent = subtitle;
   updateBottomNav(section);
   closeSidebar();
+  if (section === 'usuarios') cargarUsuarios();
 }
 
 /* ── Bottom nav active state ── */
@@ -1605,13 +1606,6 @@ function initApp() {
 
   lucide.createIcons();
   reloadAll();
-}
-
-// Patch navigate to load usuarios when entering that section
-const _origNavigate = navigate;
-function navigate(section, el) {
-  _origNavigate(section, el);
-  if (section === 'usuarios') cargarUsuarios();
 }
 
 if (checkAuth()) {
