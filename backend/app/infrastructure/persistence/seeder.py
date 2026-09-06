@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+import os
 import random
 
 from sqlalchemy.orm import Session
@@ -10,15 +11,18 @@ from app.infrastructure.persistence.models import RegistroDIPModel, UsuarioModel
 def seed_admin(session: Session) -> None:
     if session.query(UsuarioModel).filter(UsuarioModel.rol == "admin").first():
         return
+    password = os.getenv("ADMIN_PASSWORD", "admin1234")
     admin = UsuarioModel(
-        username="admin",
-        hashed_password=hash_password("admin1234"),
+        username=os.getenv("ADMIN_USERNAME", "admin"),
+        hashed_password=hash_password(password),
         rol="admin",
         sala=None,
         activo=True,
     )
     session.add(admin)
     session.commit()
+    if not os.getenv("ADMIN_PASSWORD"):
+        print("[seed_admin] ADMIN_PASSWORD no configurada: usando contraseña de desarrollo 'admin1234'. Cámbiala antes de producción.")
 
 SERVICIOS = {
     "UCI":      ["UCI", "UTI Q"],

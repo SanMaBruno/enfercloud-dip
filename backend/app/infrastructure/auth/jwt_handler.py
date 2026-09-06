@@ -7,7 +7,18 @@ from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-cambiame-en-prod-2026")
+def _load_secret_key() -> str:
+    key = os.getenv("SECRET_KEY")
+    if key:
+        return key
+    if os.getenv("RENDER") or os.getenv("ENVIRONMENT") == "production":
+        raise RuntimeError(
+            "SECRET_KEY no está configurada. Defínela como variable de entorno antes de desplegar."
+        )
+    return "dev-secret-solo-para-desarrollo-local"
+
+
+SECRET_KEY = _load_secret_key()
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_HOURS = 10  # turno diurno
 

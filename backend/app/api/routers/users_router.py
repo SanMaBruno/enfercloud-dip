@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import require_admin
@@ -19,6 +19,13 @@ class UsuarioCreate(BaseModel):
     password: str
     rol: str = "enfermero"
     sala: Optional[str] = None
+
+    @field_validator("password")
+    @classmethod
+    def password_minima(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("La contraseña debe tener al menos 8 caracteres")
+        return v
 
 
 class UsuarioResponse(BaseModel):

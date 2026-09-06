@@ -9,6 +9,12 @@ services:
     envVars:
       - key: DATABASE_URL
         value: sqlite:///./enfercloud.db
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_PASSWORD
+        generateValue: true
+      - key: RENDER
+        value: "true"
     disk:
       name: enfercloud-data
       mountPath: /opt/render/project/src

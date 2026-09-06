@@ -66,7 +66,7 @@ def test_eliminar_registro(client):
 
 def test_exportar_excel(client):
     client.post("/api/v1/registros/", json=PAYLOAD_BASE)
-    res = client.get("/api/v1/exportar/excel")
+    res = client.get("/api/v1/exportar/excel", params={"token": client.test_token})
     assert res.status_code == 200
     assert "spreadsheetml" in res.headers["content-type"]
     assert len(res.content) > 0
