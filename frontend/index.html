@@ -914,7 +914,7 @@
 <div id="toast-root" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none max-w-[calc(100vw-2rem)]"></div>
 
 <!-- ══════════════ SCRIPTS ══════════════ -->
-<script src="assets/js/api-client.js?v=4"></script>
+<script src="assets/js/api-client.js?v=5"></script>
 <script>
 /* ═══════════════════════════════════════
    AUTH
@@ -1704,6 +1704,7 @@ async function toggleActivoUsuario(id, username, activar) {
 
 async function cargarUsuarios() {
   const tbody = document.getElementById('usuarios-tbody');
+  tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-slate-400">Actualizando...</td></tr>';
   try {
     const usuarios = await apiClient.listarUsuarios();
     if (!usuarios.length) {
