@@ -827,9 +827,21 @@
       <button onclick="cerrarModalUsuario()" class="btn-icon bg-slate-100 text-slate-500"><i data-lucide="x"></i></button>
     </div>
     <form id="form-usuario" onsubmit="guardarUsuario(event)" class="space-y-3">
-      <div>
-        <label class="field-label">Nombre completo <span class="text-slate-400 font-400">(Nombre Apellido1 Apellido2)</span></label>
-        <input id="u-nombre" type="text" class="field-input" placeholder="María González Soto" autocomplete="off" />
+      <div class="grid grid-cols-1 gap-2">
+        <div>
+          <label class="field-label">Nombre</label>
+          <input id="u-nombre" type="text" class="field-input" placeholder="María" autocomplete="off" />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="field-label">Primer apellido</label>
+            <input id="u-apellido1" type="text" class="field-input" placeholder="González" autocomplete="off" />
+          </div>
+          <div>
+            <label class="field-label">Segundo apellido</label>
+            <input id="u-apellido2" type="text" class="field-input" placeholder="Soto" autocomplete="off" />
+          </div>
+        </div>
       </div>
       <div>
         <label class="field-label">Nombre de usuario</label>
@@ -893,9 +905,21 @@
         <label class="field-label">Nombre de usuario</label>
         <input id="eu-username" type="text" class="field-input bg-slate-50 text-slate-400" disabled />
       </div>
-      <div>
-        <label class="field-label">Nombre completo</label>
-        <input id="eu-nombre" type="text" class="field-input" placeholder="María González Soto" autocomplete="off" />
+      <div class="grid grid-cols-1 gap-2">
+        <div>
+          <label class="field-label">Nombre</label>
+          <input id="eu-nombre" type="text" class="field-input" placeholder="María" autocomplete="off" />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="field-label">Primer apellido</label>
+            <input id="eu-apellido1" type="text" class="field-input" placeholder="González" autocomplete="off" />
+          </div>
+          <div>
+            <label class="field-label">Segundo apellido</label>
+            <input id="eu-apellido2" type="text" class="field-input" placeholder="Soto" autocomplete="off" />
+          </div>
+        </div>
       </div>
       <div>
         <label class="field-label">Rol</label>
@@ -1632,7 +1656,9 @@ async function guardarUsuario(e) {
   try {
     await apiClient.crearUsuario({
       username: document.getElementById('u-username').value.trim(),
-      nombre_completo: document.getElementById('u-nombre').value.trim() || null,
+      nombre: document.getElementById('u-nombre').value.trim() || null,
+      primer_apellido: document.getElementById('u-apellido1').value.trim() || null,
+      segundo_apellido: document.getElementById('u-apellido2').value.trim() || null,
       password: p1,
       rol,
       sala: sala || null,
@@ -1649,10 +1675,12 @@ async function guardarUsuario(e) {
 
 let _editandoUsuarioId = null;
 
-function abrirModalEditarUsuario(id, username, rol, sala, nombreCompleto) {
+function abrirModalEditarUsuario(id, username, rol, sala, u_nombre, u_ap1, u_ap2) {
   _editandoUsuarioId = id;
   document.getElementById('eu-username').value = username;
-  document.getElementById('eu-nombre').value = (nombreCompleto || '').trim();
+  document.getElementById('eu-nombre').value = (u_nombre || '').trim();
+  document.getElementById('eu-apellido1').value = (u_ap1 || '').trim();
+  document.getElementById('eu-apellido2').value = (u_ap2 || '').trim();
   const rolSelect = document.getElementById('eu-rol');
   rolSelect.value = rol;
   const salaSelect = document.getElementById('eu-sala');
@@ -1691,8 +1719,10 @@ async function guardarEdicionUsuario(e) {
   const sala = rol === 'enfermero' ? document.getElementById('eu-sala').value : '';
   setBtnLoading('eu-submit-btn','eu-submit-text','eu-submit-loading', true);
   try {
-    const nombre_completo = document.getElementById('eu-nombre').value.trim() || null;
-    await apiClient.editarUsuario(_editandoUsuarioId, { nombre_completo, rol, sala: sala || null });
+    const nombre = document.getElementById('eu-nombre').value.trim() || null;
+    const primer_apellido = document.getElementById('eu-apellido1').value.trim() || null;
+    const segundo_apellido = document.getElementById('eu-apellido2').value.trim() || null;
+    await apiClient.editarUsuario(_editandoUsuarioId, { nombre, primer_apellido, segundo_apellido, rol, sala: sala || null });
     cerrarModalEditarUsuario();
     toast('Usuario actualizado correctamente', 'success');
     await cargarUsuarios();
@@ -1722,7 +1752,8 @@ async function toggleActivoUsuario(id, username, activar) {
 let _todosUsuarios = [];
 
 function renderFilaUsuario(u) {
-  const nc = u.nombre_completo || '—';
+  const nc = [u.nombre, u.primer_apellido, u.segundo_apellido].filter(Boolean).join(' ') || '—';
+  const esc = s => (s || '').replace(/'/g, "\\'");
   return `
     <tr data-username="${u.username.toLowerCase()}" data-nombre="${nc.toLowerCase()}">
       <td class="font-mono text-[13px]">${u.username}</td>
@@ -1732,7 +1763,7 @@ function renderFilaUsuario(u) {
       <td><span class="badge ${u.activo ? 'est-inc' : 'est-exc'}">${u.activo ? 'Activo' : 'Inactivo'}</span></td>
       <td>
         <div class="flex gap-1">
-          <button onclick="abrirModalEditarUsuario(${u.id},'${u.username}','${u.rol}','${u.sala || ''}','${(u.nombre_completo || '').replace(/'/g,"\\'")} ')" class="btn-icon bg-blue-50 text-blue-500" title="Editar">
+          <button onclick="abrirModalEditarUsuario(${u.id},'${esc(u.username)}','${esc(u.rol)}','${esc(u.sala)}','${esc(u.nombre)}','${esc(u.primer_apellido)}','${esc(u.segundo_apellido)}')" class="btn-icon bg-blue-50 text-blue-500" title="Editar">
             <i data-lucide="pencil"></i>
           </button>
           ${u.activo
@@ -1755,10 +1786,10 @@ function filtrarUsuarios() {
   const q = (document.getElementById('u-search')?.value || '').toLowerCase().trim();
   const tbody = document.getElementById('usuarios-tbody');
   const filtrados = q
-    ? _todosUsuarios.filter(u =>
-        u.username.toLowerCase().includes(q) ||
-        (u.nombre_completo || '').toLowerCase().includes(q)
-      )
+    ? _todosUsuarios.filter(u => {
+        const nc = [u.nombre, u.primer_apellido, u.segundo_apellido].filter(Boolean).join(' ').toLowerCase();
+        return u.username.toLowerCase().includes(q) || nc.includes(q);
+      })
     : _todosUsuarios;
   if (!filtrados.length) {
     tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400">Sin resultados para "${q}"</td></tr>`;

@@ -13,7 +13,9 @@ class UsuarioModel(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     username: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
-    nombre_completo: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    nombre: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    primer_apellido: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    segundo_apellido: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     hashed_password: Mapped[str] = mapped_column(String(200), nullable=False)
     rol: Mapped[str] = mapped_column(String(20), nullable=False, default="enfermero")
     sala: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
