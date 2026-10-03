@@ -28,6 +28,11 @@ class UsuarioCreate(BaseModel):
         return v
 
 
+class UsuarioUpdate(BaseModel):
+    rol: Optional[str] = None
+    sala: Optional[str] = None
+
+
 class UsuarioResponse(BaseModel):
     id: int
     username: str
@@ -78,6 +83,27 @@ def listar_usuarios(
     ]
 
 
+@router.patch("/{usuario_id}", response_model=UsuarioResponse)
+def editar_usuario(
+    usuario_id: int,
+    body: UsuarioUpdate,
+    db: Session = Depends(get_db),
+    current=Depends(require_admin),
+):
+    usuario = db.query(UsuarioModel).filter(UsuarioModel.id == usuario_id).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    if body.rol is not None:
+        if body.rol == "enfermero" and not (body.sala or usuario.sala):
+            raise HTTPException(status_code=422, detail="Un enfermero debe tener sala asignada")
+        usuario.rol = body.rol
+    if body.sala is not None:
+        usuario.sala = body.sala or None
+    db.commit()
+    db.refresh(usuario)
+    return UsuarioResponse(id=usuario.id, username=usuario.username, rol=usuario.rol, sala=usuario.sala, activo=usuario.activo)
+
+
 @router.patch("/{usuario_id}/desactivar", response_model=UsuarioResponse)
 def desactivar_usuario(
     usuario_id: int,
@@ -90,6 +116,21 @@ def desactivar_usuario(
     if usuario.username == current["sub"]:
         raise HTTPException(status_code=400, detail="No puedes desactivar tu propio usuario")
     usuario.activo = False
+    db.commit()
+    db.refresh(usuario)
+    return UsuarioResponse(id=usuario.id, username=usuario.username, rol=usuario.rol, sala=usuario.sala, activo=usuario.activo)
+
+
+@router.patch("/{usuario_id}/reactivar", response_model=UsuarioResponse)
+def reactivar_usuario(
+    usuario_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
+    usuario = db.query(UsuarioModel).filter(UsuarioModel.id == usuario_id).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    usuario.activo = True
     db.commit()
     db.refresh(usuario)
     return UsuarioResponse(id=usuario.id, username=usuario.username, rol=usuario.rol, sala=usuario.sala, activo=usuario.activo)

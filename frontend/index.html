@@ -859,7 +859,52 @@
       </div>
       <div class="flex gap-2 pt-2">
         <button type="button" onclick="cerrarModalUsuario()" class="btn btn-ghost flex-1 justify-center">Cancelar</button>
-        <button type="submit" class="btn btn-primary flex-1 justify-content:center">Crear usuario</button>
+        <button id="u-submit-btn" type="submit" class="btn btn-primary flex-1 justify-center">
+          <span id="u-submit-text"><i data-lucide="user-plus" style="width:15px;height:15px;display:inline"></i> Crear usuario</span>
+          <span id="u-submit-loading" class="hidden items-center gap-2">
+            <svg class="animate-spin" style="width:15px;height:15px" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="31.4" stroke-dashoffset="10"/></svg>
+            Creando...
+          </span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL EDITAR USUARIO ══════════════ -->
+<div id="modal-editar-usuario-bd" class="modal-backdrop">
+  <div class="modal-box p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-[16px] font-700 text-slate-800">Editar Usuario</h3>
+      <button onclick="cerrarModalEditarUsuario()" class="btn-icon bg-slate-100 text-slate-500"><i data-lucide="x"></i></button>
+    </div>
+    <form id="form-editar-usuario" onsubmit="guardarEdicionUsuario(event)" class="space-y-3">
+      <div>
+        <label class="field-label">Nombre de usuario</label>
+        <input id="eu-username" type="text" class="field-input bg-slate-50 text-slate-400" disabled />
+      </div>
+      <div>
+        <label class="field-label">Rol</label>
+        <select id="eu-rol" class="field-input" onchange="toggleSalaEditarUsuario()">
+          <option value="enfermero">Enfermero/a</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </div>
+      <div id="eu-sala-group">
+        <label class="field-label">Sala asignada</label>
+        <select id="eu-sala" class="field-input">
+          <option value="">— Seleccionar sala —</option>
+        </select>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button type="button" onclick="cerrarModalEditarUsuario()" class="btn btn-ghost flex-1 justify-center">Cancelar</button>
+        <button id="eu-submit-btn" type="submit" class="btn btn-primary flex-1 justify-center">
+          <span id="eu-submit-text"><i data-lucide="save" style="width:15px;height:15px;display:inline"></i> Guardar cambios</span>
+          <span id="eu-submit-loading" class="hidden items-center gap-2">
+            <svg class="animate-spin" style="width:15px;height:15px" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="31.4" stroke-dashoffset="10"/></svg>
+            Guardando...
+          </span>
+        </button>
       </div>
     </form>
   </div>
@@ -1550,6 +1595,15 @@ function validarPasswordMatch() {
   }
 }
 
+function setBtnLoading(btnId, textId, loadingId, loading) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.disabled = loading;
+  document.getElementById(textId).classList.toggle('hidden', loading);
+  document.getElementById(loadingId).classList.toggle('hidden', !loading);
+  document.getElementById(loadingId).classList.toggle('flex', loading);
+}
+
 async function guardarUsuario(e) {
   e.preventDefault();
   const p1 = document.getElementById('u-password').value;
@@ -1560,6 +1614,7 @@ async function guardarUsuario(e) {
   }
   const rol = document.getElementById('u-rol').value;
   const sala = rol === 'enfermero' ? document.getElementById('u-sala').value : null;
+  setBtnLoading('u-submit-btn','u-submit-text','u-submit-loading', true);
   try {
     await apiClient.crearUsuario({
       username: document.getElementById('u-username').value.trim(),
@@ -1569,6 +1624,78 @@ async function guardarUsuario(e) {
     });
     cerrarModalUsuario();
     showToast('Usuario creado correctamente', 'success');
+    cargarUsuarios();
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    setBtnLoading('u-submit-btn','u-submit-text','u-submit-loading', false);
+  }
+}
+
+let _editandoUsuarioId = null;
+
+function abrirModalEditarUsuario(id, username, rol, sala) {
+  _editandoUsuarioId = id;
+  document.getElementById('eu-username').value = username;
+  const rolSelect = document.getElementById('eu-rol');
+  rolSelect.value = rol;
+  const salaSelect = document.getElementById('eu-sala');
+  salaSelect.innerHTML = '<option value="">— Sin sala (Admin) —</option>';
+  Object.entries(SALAS).forEach(([srv, salas]) => {
+    salas.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s;
+      opt.textContent = `${srv} — ${s}`;
+      if (s === sala) opt.selected = true;
+      salaSelect.appendChild(opt);
+    });
+  });
+  toggleSalaEditarUsuario();
+  document.getElementById('modal-editar-usuario-bd').classList.add('open');
+  lucide.createIcons();
+}
+
+function cerrarModalEditarUsuario() {
+  _editandoUsuarioId = null;
+  document.getElementById('modal-editar-usuario-bd').classList.remove('open');
+}
+
+function toggleSalaEditarUsuario() {
+  const rol = document.getElementById('eu-rol').value;
+  const grupo = document.getElementById('eu-sala-group');
+  const salaSelect = document.getElementById('eu-sala');
+  grupo.style.display = rol === 'enfermero' ? '' : 'none';
+  salaSelect.required = rol === 'enfermero';
+}
+
+async function guardarEdicionUsuario(e) {
+  e.preventDefault();
+  if (!_editandoUsuarioId) return;
+  const rol = document.getElementById('eu-rol').value;
+  const sala = rol === 'enfermero' ? document.getElementById('eu-sala').value : '';
+  setBtnLoading('eu-submit-btn','eu-submit-text','eu-submit-loading', true);
+  try {
+    await apiClient.editarUsuario(_editandoUsuarioId, { rol, sala: sala || null });
+    cerrarModalEditarUsuario();
+    showToast('Usuario actualizado correctamente', 'success');
+    cargarUsuarios();
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    setBtnLoading('eu-submit-btn','eu-submit-text','eu-submit-loading', false);
+  }
+}
+
+async function toggleActivoUsuario(id, username, activar) {
+  const accion = activar ? 'reactivar' : 'desactivar';
+  if (!confirm(`¿${activar ? 'Reactivar' : 'Desactivar'} al usuario "${username}"?`)) return;
+  try {
+    if (activar) {
+      await apiClient.reactivarUsuario(id);
+    } else {
+      await apiClient.desactivarUsuario(id);
+    }
+    showToast(`Usuario ${activar ? 'reactivado' : 'desactivado'} correctamente`, 'success');
     cargarUsuarios();
   } catch (err) {
     showToast(err.message, 'error');
@@ -1590,9 +1717,22 @@ async function cargarUsuarios() {
         <td>${u.sala || '— Todos —'}</td>
         <td><span class="badge ${u.activo ? 'est-inc' : 'est-exc'}">${u.activo ? 'Activo' : 'Inactivo'}</span></td>
         <td>
-          <button onclick="eliminarUsuario(${u.id},'${u.username}')" class="btn-icon bg-red-50 text-red-500" title="Eliminar">
-            <i data-lucide="trash-2"></i>
-          </button>
+          <div class="flex gap-1">
+            <button onclick="abrirModalEditarUsuario(${u.id},'${u.username}','${u.rol}','${u.sala || ''}')" class="btn-icon bg-blue-50 text-blue-500" title="Editar">
+              <i data-lucide="pencil"></i>
+            </button>
+            ${u.activo
+              ? `<button onclick="toggleActivoUsuario(${u.id},'${u.username}',false)" class="btn-icon bg-amber-50 text-amber-500" title="Desactivar">
+                  <i data-lucide="user-x"></i>
+                </button>`
+              : `<button onclick="toggleActivoUsuario(${u.id},'${u.username}',true)" class="btn-icon bg-green-50 text-green-600" title="Reactivar">
+                  <i data-lucide="user-check"></i>
+                </button>`
+            }
+            <button onclick="eliminarUsuario(${u.id},'${u.username}')" class="btn-icon bg-red-50 text-red-500" title="Eliminar">
+              <i data-lucide="trash-2"></i>
+            </button>
+          </div>
         </td>
       </tr>
     `).join('');

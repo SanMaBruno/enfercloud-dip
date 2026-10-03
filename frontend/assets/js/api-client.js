@@ -46,6 +46,9 @@ const apiClient = {
 
   crearUsuario:      (data)              => request("POST",   "/usuarios/", data),
   listarUsuarios:    ()                  => request("GET",    "/usuarios/"),
+  editarUsuario:     (id, data)          => request("PATCH",  `/usuarios/${id}`, data),
+  desactivarUsuario: (id)               => request("PATCH",  `/usuarios/${id}/desactivar`),
+  reactivarUsuario:  (id)               => request("PATCH",  `/usuarios/${id}/reactivar`),
   eliminarUsuario:   (id)               => request("DELETE",  `/usuarios/${id}`),
 
   crearRegistro:    (data)              => request("POST",   "/registros/", data),
