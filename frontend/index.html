@@ -1609,7 +1609,7 @@ async function guardarUsuario(e) {
   const p1 = document.getElementById('u-password').value;
   const p2 = document.getElementById('u-password2').value;
   if (p1 !== p2) {
-    showToast('Las contraseñas no coinciden', 'error');
+    toast('Las contraseñas no coinciden', 'error');
     return;
   }
   const rol = document.getElementById('u-rol').value;
@@ -1623,10 +1623,10 @@ async function guardarUsuario(e) {
       sala: sala || null,
     });
     cerrarModalUsuario();
-    showToast('Usuario creado correctamente', 'success');
+    toast('Usuario creado correctamente', 'success');
     await cargarUsuarios();
   } catch (err) {
-    showToast(err.message, 'error');
+    toast(err.message, 'error');
   } finally {
     setBtnLoading('u-submit-btn','u-submit-text','u-submit-loading', false);
   }
@@ -1677,10 +1677,10 @@ async function guardarEdicionUsuario(e) {
   try {
     await apiClient.editarUsuario(_editandoUsuarioId, { rol, sala: sala || null });
     cerrarModalEditarUsuario();
-    showToast('Usuario actualizado correctamente', 'success');
+    toast('Usuario actualizado correctamente', 'success');
     await cargarUsuarios();
   } catch (err) {
-    showToast(err.message, 'error');
+    toast(err.message, 'error');
   } finally {
     setBtnLoading('eu-submit-btn','eu-submit-text','eu-submit-loading', false);
   }
@@ -1695,10 +1695,10 @@ async function toggleActivoUsuario(id, username, activar) {
     } else {
       await apiClient.desactivarUsuario(id);
     }
-    showToast(`Usuario ${activar ? 'reactivado' : 'desactivado'} correctamente`, 'success');
+    toast(`Usuario ${activar ? 'reactivado' : 'desactivado'} correctamente`, 'success');
     await cargarUsuarios();
   } catch (err) {
-    showToast(err.message, 'error');
+    toast(err.message, 'error');
   }
 }
 
@@ -1747,10 +1747,10 @@ async function eliminarUsuario(id, username) {
   if (!confirm(`¿Eliminar usuario "${username}"? Esta acción es irreversible.`)) return;
   try {
     await apiClient.eliminarUsuario(id);
-    showToast('Usuario eliminado', 'success');
+    toast('Usuario eliminado', 'success');
     await cargarUsuarios();
   } catch (err) {
-    showToast(err.message, 'error');
+    toast(err.message, 'error');
   }
 }
 
