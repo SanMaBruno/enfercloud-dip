@@ -1624,7 +1624,7 @@ async function guardarUsuario(e) {
     });
     cerrarModalUsuario();
     showToast('Usuario creado correctamente', 'success');
-    cargarUsuarios();
+    await cargarUsuarios();
   } catch (err) {
     showToast(err.message, 'error');
   } finally {
@@ -1678,7 +1678,7 @@ async function guardarEdicionUsuario(e) {
     await apiClient.editarUsuario(_editandoUsuarioId, { rol, sala: sala || null });
     cerrarModalEditarUsuario();
     showToast('Usuario actualizado correctamente', 'success');
-    cargarUsuarios();
+    await cargarUsuarios();
   } catch (err) {
     showToast(err.message, 'error');
   } finally {
@@ -1696,7 +1696,7 @@ async function toggleActivoUsuario(id, username, activar) {
       await apiClient.desactivarUsuario(id);
     }
     showToast(`Usuario ${activar ? 'reactivado' : 'desactivado'} correctamente`, 'success');
-    cargarUsuarios();
+    await cargarUsuarios();
   } catch (err) {
     showToast(err.message, 'error');
   }
@@ -1747,7 +1747,7 @@ async function eliminarUsuario(id, username) {
   try {
     await apiClient.eliminarUsuario(id);
     showToast('Usuario eliminado', 'success');
-    cargarUsuarios();
+    await cargarUsuarios();
   } catch (err) {
     showToast(err.message, 'error');
   }

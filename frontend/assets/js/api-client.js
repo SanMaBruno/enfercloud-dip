@@ -9,6 +9,7 @@ function getToken() {
 async function request(method, path, body = null) {
   const options = {
     method,
+    cache: "no-store",
     headers: {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${getToken()}`,
