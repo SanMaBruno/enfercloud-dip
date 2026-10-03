@@ -823,11 +823,26 @@
     <form id="form-usuario" onsubmit="guardarUsuario(event)" class="space-y-3">
       <div>
         <label class="field-label">Nombre de usuario</label>
-        <input id="u-username" type="text" class="field-input" placeholder="medicina_manuel_matu" required />
+        <input id="u-username" type="text" class="field-input" placeholder="medicina_manuel_matu" required autocomplete="off" />
       </div>
       <div>
         <label class="field-label">Contraseña</label>
-        <input id="u-password" type="password" class="field-input" placeholder="Mínimo 6 caracteres" required minlength="6" />
+        <div class="relative">
+          <input id="u-password" type="password" class="field-input pr-10" placeholder="Mínimo 6 caracteres" required minlength="6" autocomplete="new-password" oninput="validarPasswordMatch()" />
+          <button type="button" onclick="toggleVerPassword('u-password','u-eye1')" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1" tabindex="-1">
+            <i id="u-eye1" data-lucide="eye" style="width:16px;height:16px"></i>
+          </button>
+        </div>
+      </div>
+      <div>
+        <label class="field-label">Confirmar contraseña</label>
+        <div class="relative">
+          <input id="u-password2" type="password" class="field-input pr-10" placeholder="Repite la contraseña" required minlength="6" autocomplete="new-password" oninput="validarPasswordMatch()" />
+          <button type="button" onclick="toggleVerPassword('u-password2','u-eye2')" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1" tabindex="-1">
+            <i id="u-eye2" data-lucide="eye" style="width:16px;height:16px"></i>
+          </button>
+        </div>
+        <p id="u-pass-error" class="text-red-500 text-[12px] mt-1 hidden">Las contraseñas no coinciden</p>
       </div>
       <div>
         <label class="field-label">Rol</label>
@@ -1488,6 +1503,10 @@ function abrirModalCrearUsuario() {
     });
   });
   document.getElementById('form-usuario').reset();
+  document.getElementById('u-pass-error').classList.add('hidden');
+  document.getElementById('u-password2').classList.remove('border-red-400');
+  document.getElementById('u-password').type = 'password';
+  document.getElementById('u-password2').type = 'password';
   toggleSalaUsuario();
   document.getElementById('modal-usuario-bd').classList.add('open');
   lucide.createIcons();
@@ -1505,14 +1524,46 @@ function toggleSalaUsuario() {
   salaSelect.required = rol === 'enfermero';
 }
 
+function toggleVerPassword(inputId, iconId) {
+  const input = document.getElementById(inputId);
+  const icon = document.getElementById(iconId);
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.setAttribute('data-lucide', 'eye-off');
+  } else {
+    input.type = 'password';
+    icon.setAttribute('data-lucide', 'eye');
+  }
+  lucide.createIcons();
+}
+
+function validarPasswordMatch() {
+  const p1 = document.getElementById('u-password').value;
+  const p2 = document.getElementById('u-password2').value;
+  const err = document.getElementById('u-pass-error');
+  if (p2 && p1 !== p2) {
+    err.classList.remove('hidden');
+    document.getElementById('u-password2').classList.add('border-red-400');
+  } else {
+    err.classList.add('hidden');
+    document.getElementById('u-password2').classList.remove('border-red-400');
+  }
+}
+
 async function guardarUsuario(e) {
   e.preventDefault();
+  const p1 = document.getElementById('u-password').value;
+  const p2 = document.getElementById('u-password2').value;
+  if (p1 !== p2) {
+    showToast('Las contraseñas no coinciden', 'error');
+    return;
+  }
   const rol = document.getElementById('u-rol').value;
   const sala = rol === 'enfermero' ? document.getElementById('u-sala').value : null;
   try {
     await apiClient.crearUsuario({
       username: document.getElementById('u-username').value.trim(),
-      password: document.getElementById('u-password').value,
+      password: p1,
       rol,
       sala: sala || null,
     });

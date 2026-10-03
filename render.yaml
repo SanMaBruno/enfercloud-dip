@@ -5,7 +5,7 @@ services:
     rootDir: backend
     buildCommand: pip install --prefer-binary -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
-    healthCheckPath: /api/v1/registros/resumen
+    healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
         value: sqlite:///./enfercloud.db
