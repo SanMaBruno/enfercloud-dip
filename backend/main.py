@@ -11,6 +11,14 @@ from app.infrastructure.persistence.seeder import seed_demo, seed_admin
 
 Base.metadata.create_all(bind=engine)
 
+# Migración suave: agregar columna nombre_completo si no existe
+with engine.connect() as _conn:
+    from sqlalchemy import text as _text
+    cols = [r[1] for r in _conn.execute(_text("PRAGMA table_info(usuarios)"))]
+    if "nombre_completo" not in cols:
+        _conn.execute(_text("ALTER TABLE usuarios ADD COLUMN nombre_completo VARCHAR(200)"))
+        _conn.commit()
+
 _db = SessionLocal()
 try:
     seed_admin(_db)

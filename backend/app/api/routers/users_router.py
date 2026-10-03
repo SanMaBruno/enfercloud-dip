@@ -16,6 +16,7 @@ router = APIRouter(prefix="/usuarios", tags=["usuarios"])
 
 class UsuarioCreate(BaseModel):
     username: str
+    nombre_completo: Optional[str] = None
     password: str
     rol: str = "enfermero"
     sala: Optional[str] = None
@@ -29,6 +30,7 @@ class UsuarioCreate(BaseModel):
 
 
 class UsuarioUpdate(BaseModel):
+    nombre_completo: Optional[str] = None
     rol: Optional[str] = None
     sala: Optional[str] = None
 
@@ -36,6 +38,7 @@ class UsuarioUpdate(BaseModel):
 class UsuarioResponse(BaseModel):
     id: int
     username: str
+    nombre_completo: Optional[str]
     rol: str
     sala: Optional[str]
     activo: bool
@@ -54,6 +57,7 @@ def crear_usuario(
 
     usuario = UsuarioModel(
         username=body.username,
+        nombre_completo=body.nombre_completo or None,
         hashed_password=hash_password(body.password),
         rol=body.rol,
         sala=body.sala,
@@ -65,6 +69,7 @@ def crear_usuario(
     return UsuarioResponse(
         id=usuario.id,
         username=usuario.username,
+        nombre_completo=usuario.nombre_completo,
         rol=usuario.rol,
         sala=usuario.sala,
         activo=usuario.activo,
@@ -78,7 +83,7 @@ def listar_usuarios(
 ):
     usuarios = db.query(UsuarioModel).all()
     return [
-        UsuarioResponse(id=u.id, username=u.username, rol=u.rol, sala=u.sala, activo=u.activo)
+        UsuarioResponse(id=u.id, username=u.username, nombre_completo=u.nombre_completo, rol=u.rol, sala=u.sala, activo=u.activo)
         for u in usuarios
     ]
 
@@ -93,6 +98,8 @@ def editar_usuario(
     usuario = db.query(UsuarioModel).filter(UsuarioModel.id == usuario_id).first()
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    if body.nombre_completo is not None:
+        usuario.nombre_completo = body.nombre_completo or None
     if body.rol is not None:
         if body.rol == "enfermero" and not (body.sala or usuario.sala):
             raise HTTPException(status_code=422, detail="Un enfermero debe tener sala asignada")
@@ -101,7 +108,7 @@ def editar_usuario(
         usuario.sala = body.sala or None
     db.commit()
     db.refresh(usuario)
-    return UsuarioResponse(id=usuario.id, username=usuario.username, rol=usuario.rol, sala=usuario.sala, activo=usuario.activo)
+    return UsuarioResponse(id=usuario.id, username=usuario.username, nombre_completo=usuario.nombre_completo, rol=usuario.rol, sala=usuario.sala, activo=usuario.activo)
 
 
 @router.patch("/{usuario_id}/desactivar", response_model=UsuarioResponse)
@@ -118,7 +125,7 @@ def desactivar_usuario(
     usuario.activo = False
     db.commit()
     db.refresh(usuario)
-    return UsuarioResponse(id=usuario.id, username=usuario.username, rol=usuario.rol, sala=usuario.sala, activo=usuario.activo)
+    return UsuarioResponse(id=usuario.id, username=usuario.username, nombre_completo=usuario.nombre_completo, rol=usuario.rol, sala=usuario.sala, activo=usuario.activo)
 
 
 @router.patch("/{usuario_id}/reactivar", response_model=UsuarioResponse)
@@ -133,7 +140,7 @@ def reactivar_usuario(
     usuario.activo = True
     db.commit()
     db.refresh(usuario)
-    return UsuarioResponse(id=usuario.id, username=usuario.username, rol=usuario.rol, sala=usuario.sala, activo=usuario.activo)
+    return UsuarioResponse(id=usuario.id, username=usuario.username, nombre_completo=usuario.nombre_completo, rol=usuario.rol, sala=usuario.sala, activo=usuario.activo)
 
 
 @router.delete("/{usuario_id}", status_code=status.HTTP_204_NO_CONTENT)

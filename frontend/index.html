@@ -687,14 +687,20 @@
         </button>
       </div>
 
+      <div class="flex gap-2 mb-2">
+        <div class="relative flex-1 max-w-xs">
+          <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" style="width:15px;height:15px;pointer-events:none"></i>
+          <input id="u-search" type="text" placeholder="Buscar por usuario o nombre..." class="field-input pl-9 text-[13px]" oninput="filtrarUsuarios()" />
+        </div>
+      </div>
       <div class="card overflow-hidden">
         <div class="overflow-x-auto">
           <table class="data-table">
             <thead><tr>
-              <th>Usuario</th><th>Rol</th><th>Sala asignada</th><th>Estado</th><th>Acciones</th>
+              <th>Usuario</th><th>Nombre completo</th><th>Rol</th><th>Sala asignada</th><th>Estado</th><th>Acciones</th>
             </tr></thead>
             <tbody id="usuarios-tbody">
-              <tr><td colspan="5" class="text-center py-8 text-slate-400">Cargando...</td></tr>
+              <tr><td colspan="6" class="text-center py-8 text-slate-400">Cargando...</td></tr>
             </tbody>
           </table>
         </div>
@@ -822,6 +828,10 @@
     </div>
     <form id="form-usuario" onsubmit="guardarUsuario(event)" class="space-y-3">
       <div>
+        <label class="field-label">Nombre completo <span class="text-slate-400 font-400">(Nombre Apellido1 Apellido2)</span></label>
+        <input id="u-nombre" type="text" class="field-input" placeholder="María González Soto" autocomplete="off" />
+      </div>
+      <div>
         <label class="field-label">Nombre de usuario</label>
         <input id="u-username" type="text" class="field-input" placeholder="medicina_manuel_matu" required autocomplete="off" />
       </div>
@@ -882,6 +892,10 @@
       <div>
         <label class="field-label">Nombre de usuario</label>
         <input id="eu-username" type="text" class="field-input bg-slate-50 text-slate-400" disabled />
+      </div>
+      <div>
+        <label class="field-label">Nombre completo</label>
+        <input id="eu-nombre" type="text" class="field-input" placeholder="María González Soto" autocomplete="off" />
       </div>
       <div>
         <label class="field-label">Rol</label>
@@ -1618,6 +1632,7 @@ async function guardarUsuario(e) {
   try {
     await apiClient.crearUsuario({
       username: document.getElementById('u-username').value.trim(),
+      nombre_completo: document.getElementById('u-nombre').value.trim() || null,
       password: p1,
       rol,
       sala: sala || null,
@@ -1634,9 +1649,10 @@ async function guardarUsuario(e) {
 
 let _editandoUsuarioId = null;
 
-function abrirModalEditarUsuario(id, username, rol, sala) {
+function abrirModalEditarUsuario(id, username, rol, sala, nombreCompleto) {
   _editandoUsuarioId = id;
   document.getElementById('eu-username').value = username;
+  document.getElementById('eu-nombre').value = (nombreCompleto || '').trim();
   const rolSelect = document.getElementById('eu-rol');
   rolSelect.value = rol;
   const salaSelect = document.getElementById('eu-sala');
@@ -1675,7 +1691,8 @@ async function guardarEdicionUsuario(e) {
   const sala = rol === 'enfermero' ? document.getElementById('eu-sala').value : '';
   setBtnLoading('eu-submit-btn','eu-submit-text','eu-submit-loading', true);
   try {
-    await apiClient.editarUsuario(_editandoUsuarioId, { rol, sala: sala || null });
+    const nombre_completo = document.getElementById('eu-nombre').value.trim() || null;
+    await apiClient.editarUsuario(_editandoUsuarioId, { nombre_completo, rol, sala: sala || null });
     cerrarModalEditarUsuario();
     toast('Usuario actualizado correctamente', 'success');
     await cargarUsuarios();
@@ -1702,44 +1719,67 @@ async function toggleActivoUsuario(id, username, activar) {
   }
 }
 
+let _todosUsuarios = [];
+
+function renderFilaUsuario(u) {
+  const nc = u.nombre_completo || '—';
+  return `
+    <tr data-username="${u.username.toLowerCase()}" data-nombre="${nc.toLowerCase()}">
+      <td class="font-mono text-[13px]">${u.username}</td>
+      <td class="text-[13px]">${nc}</td>
+      <td><span class="badge ${u.rol === 'admin' ? 'est-exc' : 'est-inc'}">${u.rol}</span></td>
+      <td>${u.sala || '— Todos —'}</td>
+      <td><span class="badge ${u.activo ? 'est-inc' : 'est-exc'}">${u.activo ? 'Activo' : 'Inactivo'}</span></td>
+      <td>
+        <div class="flex gap-1">
+          <button onclick="abrirModalEditarUsuario(${u.id},'${u.username}','${u.rol}','${u.sala || ''}','${(u.nombre_completo || '').replace(/'/g,"\\'")} ')" class="btn-icon bg-blue-50 text-blue-500" title="Editar">
+            <i data-lucide="pencil"></i>
+          </button>
+          ${u.activo
+            ? `<button onclick="toggleActivoUsuario(${u.id},'${u.username}',false)" class="btn-icon bg-amber-50 text-amber-500" title="Desactivar">
+                <i data-lucide="user-x"></i>
+              </button>`
+            : `<button onclick="toggleActivoUsuario(${u.id},'${u.username}',true)" class="btn-icon bg-green-50 text-green-600" title="Reactivar">
+                <i data-lucide="user-check"></i>
+              </button>`
+          }
+          <button onclick="eliminarUsuario(${u.id},'${u.username}')" class="btn-icon bg-red-50 text-red-500" title="Eliminar">
+            <i data-lucide="trash-2"></i>
+          </button>
+        </div>
+      </td>
+    </tr>`;
+}
+
+function filtrarUsuarios() {
+  const q = (document.getElementById('u-search')?.value || '').toLowerCase().trim();
+  const tbody = document.getElementById('usuarios-tbody');
+  const filtrados = q
+    ? _todosUsuarios.filter(u =>
+        u.username.toLowerCase().includes(q) ||
+        (u.nombre_completo || '').toLowerCase().includes(q)
+      )
+    : _todosUsuarios;
+  if (!filtrados.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400">Sin resultados para "${q}"</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtrados.map(renderFilaUsuario).join('');
+  lucide.createIcons({nodes:[tbody]});
+}
+
 async function cargarUsuarios() {
   const tbody = document.getElementById('usuarios-tbody');
-  tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-slate-400">Actualizando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-slate-400">Actualizando...</td></tr>';
   try {
-    const usuarios = await apiClient.listarUsuarios();
-    if (!usuarios.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-slate-400">Sin usuarios</td></tr>';
+    _todosUsuarios = await apiClient.listarUsuarios();
+    if (!_todosUsuarios.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-400">Sin usuarios</td></tr>';
       return;
     }
-    tbody.innerHTML = usuarios.map(u => `
-      <tr>
-        <td class="font-mono text-[13px]">${u.username}</td>
-        <td><span class="badge ${u.rol === 'admin' ? 'est-exc' : 'est-inc'}">${u.rol}</span></td>
-        <td>${u.sala || '— Todos —'}</td>
-        <td><span class="badge ${u.activo ? 'est-inc' : 'est-exc'}">${u.activo ? 'Activo' : 'Inactivo'}</span></td>
-        <td>
-          <div class="flex gap-1">
-            <button onclick="abrirModalEditarUsuario(${u.id},'${u.username}','${u.rol}','${u.sala || ''}')" class="btn-icon bg-blue-50 text-blue-500" title="Editar">
-              <i data-lucide="pencil"></i>
-            </button>
-            ${u.activo
-              ? `<button onclick="toggleActivoUsuario(${u.id},'${u.username}',false)" class="btn-icon bg-amber-50 text-amber-500" title="Desactivar">
-                  <i data-lucide="user-x"></i>
-                </button>`
-              : `<button onclick="toggleActivoUsuario(${u.id},'${u.username}',true)" class="btn-icon bg-green-50 text-green-600" title="Reactivar">
-                  <i data-lucide="user-check"></i>
-                </button>`
-            }
-            <button onclick="eliminarUsuario(${u.id},'${u.username}')" class="btn-icon bg-red-50 text-red-500" title="Eliminar">
-              <i data-lucide="trash-2"></i>
-            </button>
-          </div>
-        </td>
-      </tr>
-    `).join('');
-    lucide.createIcons({nodes:[tbody]});
+    filtrarUsuarios();
   } catch {
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-red-400">Error al cargar usuarios</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-red-400">Error al cargar usuarios</td></tr>';
   }
 }
 
